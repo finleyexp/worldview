@@ -5,6 +5,13 @@ import OlSourceTileWMS from 'ol/source/tilewms';
 import OlLayerGroup from 'ol/layer/group';
 import OlLayerTile from 'ol/layer/tile';
 import OlTileGridTileGrid from 'ol/tilegrid/tilegrid';
+import Style from 'ol/style/style';
+import Circle from 'ol/style/circle';
+import Fill from 'ol/style/fill';
+import MVT from 'ol/format/mvt';
+import Icon from 'ol/style/icon';
+import LayerVectorTile from 'ol/layer/vectortile';
+import SourceVectorTile from 'ol/source/vectortile';
 import lodashCloneDeep from 'lodash/cloneDeep';
 import lodashMerge from 'lodash/merge';
 import lodashEach from 'lodash/each';
@@ -31,7 +38,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
    * @returns {object} OpenLayers layer
    */
   self.createLayer = function (def, options) {
-    var date, key, proj, layer, layerNext, layerPrior, attributes;
+    var color, hexColor, date, key, proj, layer, layerNext, layerPrior, attributes;
 
     options = options || {};
     date = self.closestDate(def, options);
@@ -54,6 +61,34 @@ export function mapLayerBuilder(models, config, cache, Parent) {
         if (proj.id === 'geographic' && def.wrapadjacentdays === true) {
           layerNext = createLayerWMTS(def, options, 1);
           layerPrior = createLayerWMTS(def, options, -1);
+
+          layer.wv = attributes;
+          layerPrior.wv = attributes;
+          layerNext.wv = attributes;
+
+          layer = new OlLayerGroup({
+            layers: [layer, layerNext, layerPrior]
+          });
+        }
+      } else if (def.type === 'vector') {
+        // If a custom palette is chosen, then set color.
+        if (models.palettes.active[def.id]) {
+          var palette = models.palettes.active[def.id].maps;
+          hexColor = models.palettes.getCustom(palette[0].custom).colors[0];
+          color = util.hexToRGBA(hexColor);
+        // TODO: add build step to add the default color to the layer config and pull in here
+        // If you use a rendered layer's default color, set the default color.
+        } else if (config.palettes.rendered[def.id]) {
+          hexColor = config.palettes.rendered[def.id].maps[0].legend.colors[0];
+          color = util.hexToRGBA(hexColor);
+        } else {
+          // Set default color when layer is initially loaded. This should go away.
+          color = 'rgba(255,0,0,1)';
+        }
+        layer = createLayerVector(def, options, null, color);
+        if (proj.id === 'geographic' && def.wrapadjacentdays === true) {
+          layerNext = createLayerVector(def, options, 1);
+          layerPrior = createLayerVector(def, options, -1);
 
           layer.wv = attributes;
           layerPrior.wv = attributes;
@@ -232,6 +267,136 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       extent: extent,
       source: new OlSourceWMTS(sourceOptions)
     });
+
+    return layer;
+  };
+
+  /*
+   * Create a new Vector Layer
+   *
+   * @method createLayerVector
+   * @static
+   *
+   * @param {object} def - Layer Specs
+   *
+   * @param {object} options - Layer options
+   *
+   *
+   * @returns {object} OpenLayers Vector layer
+   */
+  var createLayerVector = function(def, options, day, color) {
+    var date, extra, proj, start, extent, source, matrixSet, matrixIds, renderColor;
+    proj = models.proj.selected;
+    source = config.sources[def.source];
+    extent = proj.maxExtent;
+    start = [proj.maxExtent[0], proj.maxExtent[3]];
+
+    if (!source) { throw new Error(def.id + ': Invalid source: ' + def.source); }
+    if (!source) {
+      throw new Error(def.id + ': Invalid source: ' + def.source);
+    }
+    matrixSet = source.matrixSets[def.matrixSet];
+    if (!matrixSet) {
+      throw new Error(def.id + ': Undefined matrix set: ' + def.matrixSet);
+    }
+    if (typeof def.matrixIds === 'undefined') {
+      matrixIds = [];
+      lodashEach(matrixSet.resolutions, function(resolution, index) {
+        matrixIds.push(index);
+      });
+    } else {
+      matrixIds = def.matrixIds;
+    }
+
+    if (day) {
+      if (day === 1) {
+        extent = [-250, -90, -180, 90];
+        start = [-540, 90];
+      } else {
+        extent = [180, -90, 250, 90];
+        start = [180, 90];
+      }
+    }
+
+    if (def.period === 'daily') {
+      date = options.date || models.date.selected;
+      if (day) {
+        date = util.dateAdd(date, 'day', day);
+      }
+      extra = '?TIME=' + util.toISOStringDate(date);
+    }
+
+    var layerName = def.layer || def.id;
+    var tms = def.matrixSet;
+
+    var layer = new LayerVectorTile({
+      renderMode: 'image',
+      preload: 1,
+      extent: extent,
+      source: new SourceVectorTile({
+        url: source.url + extra + '&layer=' + layerName + '&tilematrixset=' + tms + '&Service=WMTS&Request=GetTile&Version=1.0.0&FORMAT=application%2Fvnd.mapbox-vector-tile&TileMatrix={z}&TileCol={x}&TileRow={y}',
+        format: new MVT(),
+        matrixSet: matrixSet.id,
+        tileGrid: new OlTileGridWMTS({
+          origin: start,
+          resolutions: matrixSet.resolutions,
+          matrixIds: matrixIds,
+          tileSize: matrixSet.tileSize[0]
+        })
+      }),
+      style: new Style({
+        image: new Circle({
+          radius: 5,
+          fill: new Fill({ color: 'rgba(255,0,0,1)' })
+        })
+      })
+    });
+
+    /**
+     * Style the vector based on feature tags outline in style json
+     * @type {Boolean}
+     */
+    var setColorFromAttribute = true;
+    if (setColorFromAttribute) {
+      var newColor = util.rgbaToShortHex(color);
+      layer.setStyle(function(feature, resolution) {
+        var confidence = feature.get('CONFIDENCE');
+        var dir = feature.get('dir');
+        if (confidence) {
+          renderColor = util.changeHue(newColor, confidence);
+          return [
+            new Style({
+              image: new Circle({
+                radius: 5,
+                fill: new Fill({ color: renderColor })
+              })
+            })
+          ];
+        } else if (dir) {
+          var radian = dir * Math.PI / 180;
+          return [
+            new Style({
+              image: new Icon({
+                src: 'images/direction_arrow.png',
+                imgSize: [12, 12],
+                rotation: radian
+              })
+            })
+          ];
+        } else {
+          renderColor = color;
+          return [
+            new Style({
+              image: new Circle({
+                radius: 5,
+                fill: new Fill({ color: renderColor })
+              })
+            })
+          ];
+        }
+      });
+    }
+
     return layer;
   };
 

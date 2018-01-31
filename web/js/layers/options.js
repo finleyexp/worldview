@@ -39,7 +39,6 @@ export function layersOptions(config, models, layer) {
       .attr('id', 'wv-layers-options-dialog')
       .attr('data-layer', layer.id);
     renderOpacity($dialog);
-
     if (config.features.customPalettes) {
       if (models.palettes.allowed(layer.id) &&
         (models.palettes.getLegends(layer.id)
@@ -293,12 +292,11 @@ export function layersOptions(config, models, layer) {
       .attr('id', 'wv-palette-selector');
     $dialog.append($header)
       .append($pane);
-    rerenderPaletteSelector(true);
+    renderColorPaletteSelector(true);
   };
 
-  var rerenderPaletteSelector = function (firstTime) {
-    var $pane = $('#wv-palette-selector')
-      .empty();
+  var renderColorPaletteSelector = function(firstTime) {
+    var $pane = $('#wv-palette-selector').empty();
     $pane.append(defaultLegend());
     var recommended = layer.palette.recommended || [];
     lodashEach(recommended, function (id) {
