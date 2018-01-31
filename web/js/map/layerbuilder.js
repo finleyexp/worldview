@@ -80,8 +80,8 @@ export function mapLayerBuilder(models, config, cache, Parent) {
 
         layer = createLayerVector(def, options, null);
         if (proj.id === 'geographic' && def.wrapadjacentdays === true) {
-          layerNext = createLayerVector(def, options, 1);
-          layerPrior = createLayerVector(def, options, -1);
+          layerNext = createLayerVector(def, options, 1, color);
+          layerPrior = createLayerVector(def, options, -1, color);
 
           layer.wv = attributes;
           layerPrior.wv = attributes;
