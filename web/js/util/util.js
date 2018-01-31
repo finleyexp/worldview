@@ -732,7 +732,7 @@ export default (function (self) {
   };
 
   self.rgbaToShortHex = function(rgba) {
-    var parts = rgba.substring(rgba.indexOf("(")).split(","),
+    var parts = rgba.substring(rgba.indexOf('(')).split(','),
       r = parseInt(self.trim(parts[0].substring(1)), 10),
       g = parseInt(self.trim(parts[1]), 10),
       b = parseInt(self.trim(parts[2]), 10),
@@ -861,7 +861,7 @@ export default (function (self) {
     return self.rgbToHex(r,g,b);
   };
 
-  self.normalize_rgb_value =function(color, m) {
+  self.normalize_rgb_value = function(color, m) {
     color = Math.floor((color + m) * 255);
     if (color < 0) {
       color = 0;
@@ -870,7 +870,7 @@ export default (function (self) {
   };
 
   self.rgbToHex = function(r, g, b) {
-    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
   };
   /**
    * Submits an AJAX request or retreives the result from the cache.
