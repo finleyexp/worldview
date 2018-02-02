@@ -71,8 +71,12 @@ if [ -e "$BUILD_DIR/colormaps" ] ; then
     if [ -d "$BUILD_DIR"/gc/colormaps ] ; then
         cp -r "$BUILD_DIR"/gc/colormaps "$BUILD_DIR"/colormaps/gc
     fi
+    if [ -d "$BUILD_DIR"/gc/vectorstyles ] ; then
+        cp -r "$BUILD_DIR"/gc/vectorstyles "$BUILD_DIR"/vectorstyles/gc
+    fi
     "$TASKS_DIR/processColormap.py" "$OPT_DIR/$OPT_SUBDIR/config.json" \
             "$BUILD_DIR/colormaps" \
+            "$BUILD_DIR/vectorstyles" \
             "$BUILD_DIR/config/palettes"
 fi
 

@@ -99,15 +99,7 @@ def process_layer(gc_layer, wv_layers, colormaps):
                     raise KeyError("No xlink:role")
                 schema_version = item["@xlink:role"]
 
-                if schema_version == "http://earthdata.nasa.gov/gibs/metadata-type/colormap/1.3":
-                    colormap_link = item["@xlink:href"]
-                    colormap_file = os.path.basename(colormap_link)
-                    colormap_id = os.path.splitext(colormap_file)[0]
-                    wv_layer["palette"] = {
-                        "id": colormap_id
-                    }
-
-                elif schema_version == "http://earthdata.nasa.gov/gibs/metadata-type/mapbox-gl-style/1.0":
+                if schema_version == "http://earthdata.nasa.gov/gibs/metadata-type/colormap/1.3" or "http://earthdata.nasa.gov/gibs/metadata-type/mapbox-gl-style/1.0":
                     colormap_link = item["@xlink:href"]
                     colormap_file = os.path.basename(colormap_link)
                     colormap_id = os.path.splitext(colormap_file)[0]

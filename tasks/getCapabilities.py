@@ -29,6 +29,7 @@ config_file = args[0]
 output_dir = args[1]
 colormaps = {}
 colormaps_dir = os.path.join(output_dir, "colormaps")
+vectorstyles_dir = os.path.join(output_dir, "vectorstyles")
 remote_count = 0
 error_count = 0
 warning_count = 0
@@ -71,12 +72,23 @@ def process_remote(entry):
 
     # Find all colormaps in GetCapabilities responses and store them in memory
     try:
-        if(type(gc["Capabilities"]["Contents"]["Layer"]) is OrderedDict):
-            process_layer(gc["Capabilities"]["Contents"]["Layer"])
-        else:
-            for layer in gc["Capabilities"]["Contents"]["Layer"]:
-                process_layer(layer)
-
+        for layer in gc["Capabilities"]["Contents"]["Layer"]:
+            ident = layer["ows:Identifier"]
+            if "ows:Metadata" in layer:
+                if ident in config.get("skipPalettes", []):
+                    sys.stderr.write("%s:    WARN: Skipping palette for %s\n" %
+                                     prog, ident)
+                    global warning_count
+                    warning_count += 1
+                else:
+                    for item in layer["ows:Metadata"]:
+                        schema_version = item["@xlink:role"]
+                        if schema_version == "http://earthdata.nasa.gov/gibs/metadata-type/colormap/1.3" or "http://earthdata.nasa.gov/gibs/metadata-type/mapbox-gl-style/1.0":
+                            colormap_link = item["@xlink:href"]
+                            #colormap_link = layer["ows:Metadata"]["@xlink:href"]
+                            colormap_file = os.path.basename(colormap_link)
+                            colormap_id = os.path.splitext(colormap_file)[0]
+                            colormaps[colormap_id] = colormap_link
     except:
         print(ident)
         print(str(traceback.format_exc()))
@@ -87,11 +99,16 @@ def process_colormaps():
     sys.stdout.flush()
     if not os.path.exists(colormaps_dir):
         os.makedirs(colormaps_dir)
+    if not os.path.exists(vectorstyles_dir):
+        os.makedirs(vectorstyles_dir)
     for link in colormaps.values():
         try:
             response = urllib.urlopen(link)
             contents = response.read()
-            output_file = os.path.join(colormaps_dir, os.path.basename(link))
+            if link.endswith('.xml'):
+                output_file = os.path.join(colormaps_dir, os.path.basename(link))
+            if link.endswith('.json'):
+                output_file = os.path.join(vectorstyles_dir, os.path.basename(link))
             with open(output_file, "w") as fp:
                 fp.write(contents)
         except Exception as e:

@@ -336,30 +336,34 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       urlParameters += '&TIME=' + util.toISOStringDate(date);
     }
 
+    var sourceOptions = new SourceVectorTile({
+      url: source.url + urlParameters,
+      layer: layerName,
+      crossOrigin: 'anonymous',
+      format: new MVT(),
+      matrixSet: tms,
+      tileGrid: new OlTileGridTileGrid({
+        extent: extent,
+        origin: start,
+        resolutions: matrixSet.resolutions,
+        tileSize: matrixSet.tileSize
+      })
+    });
+
+    console.log(config);
+
     var layer = new LayerVectorTile({
       renderMode: 'image',
       preload: 1,
       extent: extent,
-      source: new SourceVectorTile({
-        url: source.url + urlParameters,
-        layer: layerName,
-        crossOrigin: 'anonymous',
-        format: new MVT(),
-        matrixSet: tms,
-        tileGrid: new OlTileGridTileGrid({
-          extent: extent,
-          origin: start,
-          resolutions: matrixSet.resolutions,
-          tileSize: matrixSet.tileSize
-        })
-      }),
+      source: sourceOptions
+    });
       // style: new Style({
       //   image: new Circle({
       //     radius: 5,
       //     fill: new Fill({ color: 'rgba(255,0,0,1)' })
       //   })
       // })
-    });
 
     var jsonStyle = {
       'styles': [
@@ -388,7 +392,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
      * Style the vector based on feature tags outline in style json
      * @type {Boolean}
      */
-    var setColorFromAttribute = false;
+    var setColorFromAttribute = true;
     if (setColorFromAttribute) {
       layer.setStyle(function(feature, resolution) {
         renderColor = color;
@@ -401,43 +405,44 @@ export function mapLayerBuilder(models, config, cache, Parent) {
           })
         ];
       });
-      // var newColor = util.rgbaToShortHex(color);
-      // layer.setStyle(function(feature, resolution) {
-      // var confidence = feature.get('CONFIDENCE');
-      // var dir = feature.get('dir');
-      // if (confidence) {
-      //   renderColor = util.changeHue(newColor, confidence);
-      //   return [
-      //     new Style({
-      //       image: new Circle({
-      //         radius: 5,
-      //         fill: new Fill({ color: renderColor })
-      //       })
-      //     })
-      //   ];
-      // } else if (dir) {
-      //   var radian = dir * Math.PI / 180;
-      //   return [
-      //     new Style({
-      //       image: new Icon({
-      //         src: 'images/direction_arrow.png',
-      //         imgSize: [12, 12],
-      //         rotation: radian
-      //       })
-      //     })
-      //   ];
-      // } else {
-      // renderColor = color;
-      // return [
-      //   new Style({
-      //     image: new Circle({
-      //       radius: 5,
-      //       fill: new Fill({ color: renderColor })
-      //     })
-      //   })
-      // ];
-      // }
-      // });
+
+      var newColor = util.rgbaToShortHex(color);
+      layer.setStyle(function(feature, resolution) {
+        var confidence = feature.get('CONFIDENCE');
+        var dir = feature.get('dir');
+        if (confidence) {
+          renderColor = util.changeHue(newColor, confidence);
+          return [
+            new Style({
+              image: new Circle({
+                radius: 5,
+                fill: new Fill({ color: renderColor })
+              })
+            })
+          ];
+        } else if (dir) {
+          var radian = dir * Math.PI / 180;
+          return [
+            new Style({
+              image: new Icon({
+                src: 'images/direction_arrow.png',
+                imgSize: [12, 12],
+                rotation: radian
+              })
+            })
+          ];
+        } else {
+          renderColor = color;
+          return [
+            new Style({
+              image: new Circle({
+                radius: 5,
+                fill: new Fill({ color: renderColor })
+              })
+            })
+          ];
+        }
+      });
     }
 
     return layer;
