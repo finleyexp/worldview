@@ -84,7 +84,7 @@ def process_remote(entry):
                 else:
                     for item in layer["ows:Metadata"]:
                         schema_version = item["@xlink:role"]
-                        if schema_version == "http://earthdata.nasa.gov/gibs/metadata-type/colormap/1.3":
+                        if schema_version == "http://earthdata.nasa.gov/gibs/metadata-type/colormap/1.3" or "http://earthdata.nasa.gov/gibs/metadata-type/mapbox-gl-style/1.0":
                             colormap_link = item["@xlink:href"]
                             colormap_file = os.path.basename(colormap_link)
                             colormap_id = os.path.splitext(colormap_file)[0]
@@ -106,12 +106,16 @@ def process_colormaps():
     sys.stdout.flush()
     if not os.path.exists(colormaps_dir):
         os.makedirs(colormaps_dir)
+    if not os.path.exists(vectorstyles_dir):
+        os.makedirs(vectorstyles_dir)
     for link in colormaps.values():
         try:
             response = urllib.urlopen(link)
             contents = response.read()
             if link.endswith('.xml'):
                 output_file = os.path.join(colormaps_dir, os.path.basename(link))
+            if link.endswith('.json'):
+                output_file = os.path.join(vectorstyles_dir, os.path.basename(link))
             with open(output_file, "w") as fp:
                 fp.write(contents)
         except Exception as e:

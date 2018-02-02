@@ -14,17 +14,18 @@ help_description = """\
 Converts colormaps to JSON files
 """
 
-parser = OptionParser(usage="Usage: %s <config_file> <colormap_input_dir> <output_dir>" % prog,
+parser = OptionParser(usage="Usage: %s <config_file> <colormap_input_dir> <vectorstyles_input_dir> <output_dir>" % prog,
                       version="%s version %s" % (prog, version),
                       epilog=help_description)
 
 (options, args) = parser.parse_args()
-if len(args) != 3:
+if len(args) != 4:
     parser.error("Invalid number of arguments")
 
 config_file = args[0]
 colormap_input_dir = args[1]
-output_dir = args[2]
+vectorstyles_input_dir = args[2]
+output_dir = args[3]
 
 with open(config_file) as fp:
     config = json.load(fp)
