@@ -48,16 +48,18 @@ export function layersOptions(config, models, layer) {
           renderLegendButtons($dialog);
           } */
         var legend = models.palettes.getLegend(layer.id, index);
-        if ((legend.type === 'continuous') ||
-          (legend.type === 'discrete')) {
-          renderRange($dialog);
-          if (config.layers[layer.id].type !== 'wms') {
-            renderPaletteSelector($dialog);
-          }
-        } else if (models.palettes.getDefaultLegend(layer.id, index)
-          .colors.length === 1) {
-          if (config.layers[layer.id].type !== 'wms') {
-            renderPaletteSelector($dialog);
+        if (legend) {
+          if ((legend.type === 'continuous') ||
+            (legend.type === 'discrete')) {
+            renderRange($dialog);
+            if (config.layers[layer.id].type !== 'wms') {
+              renderPaletteSelector($dialog);
+            }
+          } else if (models.palettes.getDefaultLegend(layer.id, index)
+            .colors.length === 1) {
+            if (config.layers[layer.id].type !== 'wms') {
+              renderPaletteSelector($dialog);
+            }
           }
         }
       }

@@ -71,20 +71,10 @@ export function mapLayerBuilder(models, config, cache, Parent) {
           });
         }
       } else if (def.type === 'vector') {
-        // If a custom palette is chosen, then set color.
-        if (models.palettes.active[def.id]) {
-          var palette = models.palettes.active[def.id].maps;
-          hexColor = models.palettes.getCustom(palette[0].custom).colors[0];
-          color = util.hexToRGBA(hexColor);
-        // TODO: add build step to add the default color to the layer config and pull in here
-        // If you use a rendered layer's default color, set the default color.
-        } else if (config.palettes.rendered[def.id]) {
-          hexColor = config.palettes.rendered[def.id].maps[0].legend.colors[0];
-          color = util.hexToRGBA(hexColor);
-        } else {
-          // Set default color when layer is initially loaded. This should go away.
-          color = 'rgba(255,0,0,1)';
-        }
+        console.log(config);
+        // Set default color when layer is initially loaded. This should go away.
+        color = 'rgba(255,0,0,1)';
+
         layer = createLayerVector(def, options, null, color);
         if (proj.id === 'geographic' && def.wrapadjacentdays === true) {
           layerNext = createLayerVector(def, options, 1, color);
@@ -350,8 +340,6 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       })
     });
 
-    console.log(config);
-
     var layer = new LayerVectorTile({
       renderMode: 'image',
       preload: 1,
@@ -365,34 +353,11 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       //   })
       // })
 
-    var jsonStyle = {
-      'styles': [
-        {
-          'name': 'Terra Ascending Orbit Tracks - Big Points',
-          'property': 'time',
-          'regex': '^[0-9][0-9]:[0-9][0,5]$',
-          'label': { 'property': 'label', 'stroke_color': 'rgb(128,128,128)', 'fill_color': 'rgb(255,255,255)' },
-          'size': 7.5,
-          'points': { 'color': 'rgb(242,135,34)', 'radius': 10 }
-        },
-        {
-          'name': 'Terra Ascending Orbit Tracks - Little Points',
-          'property': 'time',
-          'regex': '^[0-9][0-9]:[0-9][1,2,3,4,6,7,8,9]$',
-          'points': { 'color': 'rgb(242,135,34)', 'radius': 7.5 }
-        },
-        {
-          'name': 'Terra Ascending Orbit Tracks - Lines',
-          'lines': { 'color': 'rgb(242,135,34)', 'width': 5 }
-        }
-      ]
-    };
-
     /**
      * Style the vector based on feature tags outline in style json
      * @type {Boolean}
      */
-    var setColorFromAttribute = true;
+    var setColorFromAttribute = false;
     if (setColorFromAttribute) {
       layer.setStyle(function(feature, resolution) {
         renderColor = color;

@@ -21,7 +21,9 @@ export function palettesModel(models, config) {
     var name = config.layers[layerId].palette.id;
     var palette = config.palettes.rendered[name];
     if (!lodashIsUndefined(index)) {
-      palette = palette.maps[index];
+      if (palette.maps) {
+        palette = palette.maps[index];
+      }
     }
     return palette;
   };
@@ -107,8 +109,11 @@ export function palettesModel(models, config) {
   };
 
   self.getCount = function (layerId) {
-    return self.getRendered(layerId)
-      .maps.length;
+    if (self.getRendered(layerId).maps) {
+      return self.getRendered(layerId).maps.length;
+    } else {
+      return 0;
+    }
   };
   /**
    * Gets a single colormap (entries / legend combo)
