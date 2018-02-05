@@ -68,13 +68,13 @@ fi
 
 # Run processVectorStyles.py and move colormaps where we want them
 if [ -e "$BUILD_DIR/vectorstyles" ] ; then
-    mkdir -p "$BUILD_DIR"/config/vectorstyles
+    mkdir -p "$BUILD_DIR"/config/palettes
     if [ -d "$BUILD_DIR"/gc/vectorstyles ] ; then
         cp -r "$BUILD_DIR"/gc/vectorstyles "$BUILD_DIR"/vectorstyles/gc
     fi
     "$TASKS_DIR/processVectorStyles.py" "$OPT_DIR/$OPT_SUBDIR/config.json" \
             "$BUILD_DIR/vectorstyles" \
-            "$BUILD_DIR/config/vectorstyles"
+            "$BUILD_DIR/config/palettes"
 fi
 
 # Run processColormap.py and move colormaps where we want them
@@ -83,12 +83,8 @@ if [ -e "$BUILD_DIR/colormaps" ] ; then
     if [ -d "$BUILD_DIR"/gc/colormaps ] ; then
         cp -r "$BUILD_DIR"/gc/colormaps "$BUILD_DIR"/colormaps/gc
     fi
-    if [ -d "$BUILD_DIR"/gc/vectorstyles ] ; then
-        cp -r "$BUILD_DIR"/gc/vectorstyles "$BUILD_DIR"/vectorstyles/gc
-    fi
     "$TASKS_DIR/processColormap.py" "$OPT_DIR/$OPT_SUBDIR/config.json" \
             "$BUILD_DIR/colormaps" \
-            "$BUILD_DIR/vectorstyles" \
             "$BUILD_DIR/config/palettes"
 fi
 
