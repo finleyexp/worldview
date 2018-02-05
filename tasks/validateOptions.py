@@ -100,9 +100,6 @@ for layer_id in wv["layers"].keys():
         error("[%s] No palette definition" % (layer_id))
     elif "palette" in layer:
         palette_id = layer["palette"]["id"]
-        # TODO: if the palette_id is a json file. then, use that (If I want to use a remote json file, otherwise
-        # it must be processed first in extractConfigFromWMTS)
-
         if not os.path.exists(os.path.join(config_dir, "palettes",
                 palette_id + ".json")):
             error("[%s] Unknown palette: %s" % (layer_id, palette_id))
@@ -111,7 +108,7 @@ for layer_id in wv["layers"].keys():
         error("[%s] No vectorStyle definition" % (layer_id))
     elif "vectorStyle" in layer:
         vector_style_id = layer["vectorStyle"]["id"]
-        if not os.path.exists(os.path.join(config_dir, "vectorstyles",
+        if not os.path.exists(os.path.join(config_dir, "vector_styles",
                 vector_style_id + ".json")):
             error("[%s] Unknown vector style: %s" % (layer_id, vector_style_id))
             del layer["vectorStyle"]

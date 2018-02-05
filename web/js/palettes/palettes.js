@@ -111,7 +111,7 @@ export default (function (self) {
   self.loadRenderedVectorStyle = function (config, layerId) {
     var layer = config.layers[layerId];
     return util.load.config(config.vectorStyles.rendered,
-      layer.vectorStyle.id, 'config/vectorstyles/' + layer.vectorStyle.id + '.json');
+      layer.vectorStyle.id, 'config/vector_styles/' + layer.vectorStyle.id + '.json');
   };
 
   self.requirements = function (state, config) {

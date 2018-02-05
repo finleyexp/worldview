@@ -28,9 +28,9 @@ if len(args) != 2:
 config_file = args[0]
 output_dir = args[1]
 colormaps = {}
-vectorstyles = {}
+vector_styles = {}
 colormaps_dir = os.path.join(output_dir, "colormaps")
-vectorstyles_dir = os.path.join(output_dir, "vectorstyles")
+vector_styles_dir = os.path.join(output_dir, "vector_styles")
 remote_count = 0
 error_count = 0
 warning_count = 0
@@ -71,7 +71,7 @@ def process_remote(entry):
         fp.write(contents)
     gc = xmltodict.parse(contents)
 
-    # Find all colormaps and vectorstyles in GetCapabilities responses and store them in memory
+    # Find all colormaps and vector_styles in GetCapabilities responses and store them in memory
     try:
         for layer in gc["Capabilities"]["Contents"]["Layer"]:
             ident = layer["ows:Identifier"]
@@ -84,7 +84,7 @@ def process_remote(entry):
                 else:
                     for item in layer["ows:Metadata"]:
                         schema_version = item["@xlink:role"]
-                        if schema_version == "http://earthdata.nasa.gov/gibs/metadata-type/colormap/1.3" or "http://earthdata.nasa.gov/gibs/metadata-type/mapbox-gl-style/1.0":
+                        if schema_version == "http://earthdata.nasa.gov/gibs/metadata-type/colormap/1.3":
                             colormap_link = item["@xlink:href"]
                             colormap_file = os.path.basename(colormap_link)
                             colormap_id = os.path.splitext(colormap_file)[0]
@@ -94,7 +94,7 @@ def process_remote(entry):
                             vector_style_link = item["@xlink:href"]
                             vector_style_file = os.path.basename(vector_style_link)
                             vector_style_id = os.path.splitext(vector_style_file)[0]
-                            vectorstyles[vector_style_id] = vector_style_link
+                            vector_styles[vector_style_id] = vector_style_link
     except:
         print(ident)
         print(str(traceback.format_exc()))
@@ -106,16 +106,12 @@ def process_colormaps():
     sys.stdout.flush()
     if not os.path.exists(colormaps_dir):
         os.makedirs(colormaps_dir)
-    if not os.path.exists(vectorstyles_dir):
-        os.makedirs(vectorstyles_dir)
     for link in colormaps.values():
         try:
             response = urllib.urlopen(link)
             contents = response.read()
             if link.endswith('.xml'):
                 output_file = os.path.join(colormaps_dir, os.path.basename(link))
-            if link.endswith('.json'):
-                output_file = os.path.join(vectorstyles_dir, os.path.basename(link))
             with open(output_file, "w") as fp:
                 fp.write(contents)
         except Exception as e:
@@ -127,17 +123,17 @@ def process_colormaps():
 
 
 # Fetch every colormap from the API and write response to file system
-def process_vectorstyles():
-    print "%s: Fetching %d vectorstyles_dir" % (prog, len(vectorstyles_dir))
+def process_vector_styles():
+    print "%s: Fetching %d vector_styles_dir" % (prog, len(vector_styles_dir))
     sys.stdout.flush()
-    if not os.path.exists(vectorstyles_dir):
-        os.makedirs(vectorstyles_dir)
-    for link in vectorstyles_dir.values():
+    if not os.path.exists(vector_styles_dir):
+        os.makedirs(vector_styles_dir)
+    for link in vector_styles_dir.values():
         try:
             response = urllib.urlopen(link)
             contents = response.read()
             if link.endswith('.json'):
-                output_file = os.path.join(vectorstyles_dir, os.path.basename(link))
+                output_file = os.path.join(vector_styles_dir, os.path.basename(link))
             with open(output_file, "w") as fp:
                 fp.write(contents)
         except Exception as e:
@@ -145,7 +141,7 @@ def process_vectorstyles():
                 (prog, link, str(e)))
             global warning_count
             warning_count += 1
-    print "%s: Fetching %d vectorstyles_dir" % (prog, len(vectorstyles_dir))
+    print "%s: Fetching %d vector_styles_dir" % (prog, len(vector_styles_dir))
 
 
 tolerant = config.get("tolerant", False)
@@ -163,8 +159,8 @@ if "wv-options-fetch" in config:
                 sys.stderr.write("%s: ERROR: %s\n" % (prog, str(e)))
     if colormaps:
         process_colormaps()
-    if vectorstyles:
-        process_vectorstyles()
+    if vector_styles:
+        process_vector_styles()
 
 print "%s: %d error(s), %d remote(s)" % (prog, error_count, remote_count)
 
