@@ -344,8 +344,6 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       })
     });
 
-    console.log(config);
-
     var layer = new LayerVectorTile({
       renderMode: 'image',
       preload: 1,
@@ -366,7 +364,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
      * Style the vector based on feature tags outline in style json
      * @type {Boolean}
      */
-    var setColorFromAttribute = true;
+    var setColorFromAttribute = false;
     if (setColorFromAttribute) {
       layer.setStyle(function(feature, resolution) {
         renderColor = color;
