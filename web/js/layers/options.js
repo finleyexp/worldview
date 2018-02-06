@@ -427,7 +427,7 @@ export function layersOptions(config, models, layer) {
 
   var customLegend = function (id) {
     var source = models.palettes.getDefaultLegend(layer.id, index);
-    var target = models.palettes.getCustom(id);
+    var target = models.palettes.getCustomPalette(id);
     var targetType = (target.colors.length === 1) ? 'classification' : 'continuous';
 
     if ((source.type === 'continuous' && targetType === 'continuous') ||

@@ -13,11 +13,15 @@ export function palettesModel(models, config) {
     custom: {}
   };
 
+  config.vectorStyles = config.vectorStyles || {
+    rendered: {}
+  };
+
   var self = {};
   self.events = util.events();
   self.active = {};
 
-  self.getRendered = function (layerId, index) {
+  self.getRenderedPalette = function (layerId, index) {
     var name = config.layers[layerId].palette.id;
     var palette = config.palettes.rendered[name];
     if (!lodashIsUndefined(index)) {
@@ -28,7 +32,18 @@ export function palettesModel(models, config) {
     return palette;
   };
 
-  self.getCustom = function (paletteId) {
+  self.getRenderedVectorStyle = function (layerId, index) {
+    var name = config.layers[layerId].vectorStyle.id;
+    var vectorStyle = config.vectorStyles.rendered[name];
+    if (!lodashIsUndefined(index)) {
+      if (vectorStyle.styles) {
+        vectorStyle = vectorStyle.styles[index];
+      }
+    }
+    return vectorStyle;
+  };
+
+  self.getCustomPalette = function (paletteId) {
     var palette = config.palettes.custom[paletteId];
     if (!palette) {
       throw new Error('Invalid palette: ' + paletteId);
@@ -40,13 +55,12 @@ export function palettesModel(models, config) {
     self.active[layerId] = self.active[layerId] || {};
     var active = self.active[layerId];
     active.maps = active.maps || [];
-    lodashEach(self.getRendered(layerId)
-      .maps,
-    function (palette, index) {
-      if (!active.maps[index]) {
-        active.maps[index] = lodashCloneDeep(palette);
-      }
-    });
+    lodashEach(self.getRenderedPalette(layerId).maps,
+      function (palette, index) {
+        if (!active.maps[index]) {
+          active.maps[index] = lodashCloneDeep(palette);
+        }
+      });
   };
 
   self.allowed = function (layerId) {
@@ -109,8 +123,8 @@ export function palettesModel(models, config) {
   };
 
   self.getCount = function (layerId) {
-    if (self.getRendered(layerId).maps) {
-      return self.getRendered(layerId).maps.length;
+    if (self.getRenderedPalette(layerId).maps) {
+      return self.getRenderedPalette(layerId).maps.length;
     } else {
       return 0;
     }
@@ -131,7 +145,7 @@ export function palettesModel(models, config) {
     if (self.active[layerId]) {
       return self.active[layerId].maps[index];
     }
-    return self.getRendered(layerId, index);
+    return self.getRenderedPalette(layerId, index);
   };
   /**
    * Gets the legend of a colormap
@@ -160,7 +174,7 @@ export function palettesModel(models, config) {
    * @return {object} object of the legend
    */
   self.getDefaultLegend = function (layerId, index) {
-    var palette = self.getRendered(layerId, index);
+    var palette = self.getRenderedPalette(layerId, index);
     return palette.legend || palette.entries;
   };
 
@@ -467,7 +481,7 @@ export function palettesModel(models, config) {
         use = true;
         return false;
       }
-      var rendered = self.getRendered(layerId, index);
+      var rendered = self.getRenderedPalette(layerId, index);
       if (palette.type !== 'classification') {
         if (palette.min <= 0) {
           delete palette.min;
@@ -506,7 +520,7 @@ export function palettesModel(models, config) {
       };
       var source = entries.colors;
       var target = (palette.custom)
-        ? self.getCustom(palette.custom)
+        ? self.getCustomPalette(palette.custom)
           .colors : source;
 
       var min = palette.min || 0;

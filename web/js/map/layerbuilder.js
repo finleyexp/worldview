@@ -71,7 +71,6 @@ export function mapLayerBuilder(models, config, cache, Parent) {
           });
         }
       } else if (def.type === 'vector') {
-        console.log(config);
         // Set default color when layer is initially loaded. This should go away.
         color = 'rgba(255,0,0,1)';
 
