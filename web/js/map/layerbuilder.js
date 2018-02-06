@@ -72,11 +72,13 @@ export function mapLayerBuilder(models, config, cache, Parent) {
           });
         }
       } else if (def.type === 'vector') {
-        // Add vector layer style to config.rendered object
         var promises = [];
         if (config.layers[def.id] && config.layers[def.id].vectorStyle) {
           promises.push(palettes.loadRenderedVectorStyle(config, def.id));
         }
+        console.log(config);
+        // Set default color when layer is initially loaded. This should go away.
+        color = 'rgba(255,0,0,1)';
 
         layer = createLayerVector(def, options, null);
         if (proj.id === 'geographic' && def.wrapadjacentdays === true) {

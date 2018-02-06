@@ -108,7 +108,7 @@ for layer_id in wv["layers"].keys():
         error("[%s] No vectorStyle definition" % (layer_id))
     elif "vectorStyle" in layer:
         vector_style_id = layer["vectorStyle"]["id"]
-        if not os.path.exists(os.path.join(config_dir, "vector_styles",
+        if not os.path.exists(os.path.join(config_dir, "vectorstyles",
                 vector_style_id + ".json")):
             error("[%s] Unknown vector style: %s" % (layer_id, vector_style_id))
             del layer["vectorStyle"]
