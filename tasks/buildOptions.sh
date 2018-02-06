@@ -54,7 +54,7 @@ fi
 
 mkdir -p "$DEST_DIR/config"
 mkdir -p "$BUILD_DIR/colormaps"
-mkdir -p "$BUILD_DIR/vector_styles"
+mkdir -p "$BUILD_DIR/vectorstyles"
 
 if [ -e "$BUILD_DIR/features.json" ] ; then
     cp "$BUILD_DIR/features.json" "$BUILD_DIR/config/wv.json/_features.json"
@@ -67,14 +67,14 @@ if [ -e "$BUILD_DIR/config.json" ] ; then
 fi
 
 # Run processVectorStyles.py and move colormaps where we want them
-if [ -e "$BUILD_DIR/vector_styles" ] ; then
-    mkdir -p "$BUILD_DIR"/config/vector_styles
-    if [ -d "$BUILD_DIR"/gc/vector_styles ] ; then
-        cp -r "$BUILD_DIR"/gc/vector_styles "$BUILD_DIR"/vector_styles/gc
+if [ -e "$BUILD_DIR/vectorstyles" ] ; then
+    mkdir -p "$BUILD_DIR"/config/vectorstyles
+    if [ -d "$BUILD_DIR"/gc/vectorstyles ] ; then
+        cp -r "$BUILD_DIR"/gc/vectorstyles "$BUILD_DIR"/vectorstyles/gc
     fi
     "$TASKS_DIR/processVectorStyles.py" "$OPT_DIR/$OPT_SUBDIR/config.json" \
-            "$BUILD_DIR/vector_styles" \
-            "$BUILD_DIR/config/vector_styles"
+            "$BUILD_DIR/vectorstyles" \
+            "$BUILD_DIR/config/vectorstyles"
 fi
 
 # Run processColormap.py and move colormaps where we want them

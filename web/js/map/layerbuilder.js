@@ -1,4 +1,5 @@
 import util from '../util/util';
+import palettes from '../palettes/palettes';
 import OlTileGridWMTS from 'ol/tilegrid/wmts';
 import OlSourceWMTS from 'ol/source/wmts';
 import OlSourceTileWMS from 'ol/source/tilewms';
@@ -71,6 +72,11 @@ export function mapLayerBuilder(models, config, cache, Parent) {
           });
         }
       } else if (def.type === 'vector') {
+        var promises = [];
+        if (config.layers[def.id] && config.layers[def.id].vectorStyle) {
+          promises.push(palettes.loadRenderedVectorStyle(config, def.id));
+        }
+        console.log(config);
         // Set default color when layer is initially loaded. This should go away.
         color = 'rgba(255,0,0,1)';
 
