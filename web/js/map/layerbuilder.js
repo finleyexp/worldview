@@ -8,9 +8,10 @@ import OlLayerTile from 'ol/layer/tile';
 import OlTileGridTileGrid from 'ol/tilegrid/tilegrid';
 import Style from 'ol/style/style';
 import Circle from 'ol/style/circle';
+import Icon from 'ol/style/icon';
 import Fill from 'ol/style/fill';
 import MVT from 'ol/format/mvt';
-import Icon from 'ol/style/icon';
+import Stroke from 'ol/style/stroke';
 import LayerVectorTile from 'ol/layer/vectortile';
 import SourceVectorTile from 'ol/source/vectortile';
 import lodashCloneDeep from 'lodash/cloneDeep';
@@ -40,7 +41,6 @@ export function mapLayerBuilder(models, config, cache, Parent) {
    */
   self.createLayer = function (def, options) {
     var color, hexColor, date, key, proj, layer, layerNext, layerPrior, attributes;
-
     options = options || {};
     date = self.closestDate(def, options);
     key = self.layerKey(def, options, date);
@@ -277,8 +277,9 @@ export function mapLayerBuilder(models, config, cache, Parent) {
    *
    * @returns {object} OpenLayers Vector layer
    */
-  var createLayerVector = function(def, options, day, color) {
+  var createLayerVector = function(def, options, day) {
     var date, urlParameters, proj, extent, source, matrixSet, matrixIds, start, renderColor;
+    var styleCache = {};
     proj = models.proj.selected;
     source = config.sources[def.source];
     extent = proj.maxExtent;
@@ -345,18 +346,86 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       })
     });
 
+    var styleOptions = function(feature, resolution) {
+      // Create a default style in case nothing matches
+      var fill = new Fill({
+        color: 'rgba(255,255,255,0.4)'
+      });
+      var stroke = new Stroke({
+        color: '#3399CC',
+        width: 1.25
+      });
+      var defaultStyle = new Style({
+        fill: new Fill({
+          color: [250, 0, 0, 1]
+        }),
+        stroke: new Stroke({
+          color: [220, 0, 0, 1],
+          width: 1
+        }),
+        image: new Circle({
+          fill: fill,
+          stroke: stroke,
+          radius: 5
+        })
+      });
+
+      // Get the rendered vectorStyle's object containing groups of styles based on features
+      var layerStyles = config.vectorStyles.rendered[def.id].styles;
+      // Each group in the object will have a property and name to be matched to vector point features
+      var styleGroup = Object.keys(layerStyles).map(e => layerStyles[e]);
+
+      lodashEach(styleGroup, function(styleValues, styleKeys) {
+        var stylePropertyKey = styleValues.property;
+        // Style features with matching style properties
+        if (feature.properties_[stylePropertyKey]) {
+          // Style fire layer confidence
+          if (feature.type_ === 'Point' && stylePropertyKey === 'CONFIDENCE') {
+          }
+          // Ensure the feature is a point and the style has a property of time to style big/little time points
+          else if (feature.type_ === 'Point' && stylePropertyKey === 'time') {
+            // Use regular expression here to style little vs big points
+            //
+            // Little Points = ^[0-9][0-9]:[0-9][1,2,3,4,6,7,8,9]$
+            // Big Points = ^[0-9][0-9]:[0-9][0,5]$
+            //
+          }
+        // Must specify LineString and lines since these values are different
+        // TODO: Make these values match in the style json.
+        } else if (feature.type_ === 'LineString' && styleValues['lines']) {
+        }
+      });
+
+      // get the CONFIDENCE from the feature properties
+      var confidence = feature.get('CONFIDENCE');
+      // console.log(confidence);
+      // if there is no confidence or its one we don't recognize,
+      // return the default style (in an array!)
+      if (!confidence) {
+        return [defaultStyle];
+      }
+      // check the cache and create a new style for the income
+      // confidence if its not been created before.
+      if (!styleCache[confidence]) {
+        styleCache[confidence] = new Style({
+          fill: new Fill({
+            color: defaultStyle.fill
+          }),
+          stroke: defaultStyle.stroke
+        });
+      }
+      // at this point, the style for the current confidence is in the cache
+      // so return it (as an array!)
+      return [styleCache[confidence]];
+    };
+
     var layer = new LayerVectorTile({
       renderMode: 'image',
       preload: 1,
       extent: extent,
-      source: sourceOptions
+      source: sourceOptions,
+      style: styleOptions
     });
-      // style: new Style({
-      //   image: new Circle({
-      //     radius: 5,
-      //     fill: new Fill({ color: 'rgba(255,0,0,1)' })
-      //   })
-      // })
 
     /**
      * Style the vector based on feature tags outline in style json
@@ -376,43 +445,43 @@ export function mapLayerBuilder(models, config, cache, Parent) {
         ];
       });
 
-      var newColor = util.rgbaToShortHex(color);
-      layer.setStyle(function(feature, resolution) {
-        var confidence = feature.get('CONFIDENCE');
-        var dir = feature.get('dir');
-        if (confidence) {
-          renderColor = util.changeHue(newColor, confidence);
-          return [
-            new Style({
-              image: new Circle({
-                radius: 5,
-                fill: new Fill({ color: renderColor })
-              })
-            })
-          ];
-        } else if (dir) {
-          var radian = dir * Math.PI / 180;
-          return [
-            new Style({
-              image: new Icon({
-                src: 'images/direction_arrow.png',
-                imgSize: [12, 12],
-                rotation: radian
-              })
-            })
-          ];
-        } else {
-          renderColor = color;
-          return [
-            new Style({
-              image: new Circle({
-                radius: 5,
-                fill: new Fill({ color: renderColor })
-              })
-            })
-          ];
-        }
-      });
+      // var newColor = util.rgbaToShortHex(color);
+      // layer.setStyle(function(feature, resolution) {
+      //   var confidence = feature.get('CONFIDENCE');
+      //   var dir = feature.get('dir');
+      //   if (confidence) {
+      //     renderColor = util.changeHue(newColor, confidence);
+      //     return [
+      //       new Style({
+      //         image: new Circle({
+      //           radius: 5,
+      //           fill: new Fill({ color: renderColor })
+      //         })
+      //       })
+      //     ];
+      //   } else if (dir) {
+      //     var radian = dir * Math.PI / 180;
+      //     return [
+      //       new Style({
+      //         image: new Icon({
+      //           src: 'images/direction_arrow.png',
+      //           imgSize: [12, 12],
+      //           rotation: radian
+      //         })
+      //       })
+      //     ];
+      //   } else {
+      //     renderColor = color;
+      //     return [
+      //       new Style({
+      //         image: new Circle({
+      //           radius: 5,
+      //           fill: new Fill({ color: renderColor })
+      //         })
+      //       })
+      //     ];
+      //   }
+      // });
     }
 
     return layer;
