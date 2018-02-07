@@ -276,6 +276,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
    * @returns {object} OpenLayers Vector layer
    */
   var createLayerVector = function(def, options, day) {
+    // console.log(config);
     var date, urlParameters, proj, extent, source, matrixSet, matrixIds, start, renderColor;
     var styleCache = {};
     proj = models.proj.selected;
@@ -381,6 +382,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       // ref: http://openlayersbook.github.io/ch06-styling-vector-layers/example-07.html
       var featureStyle;
       lodashEach(keys, function(keyValues, keyKeys) {
+        var fill, stroke, image, colorL, colorM, colorH;
         // get the CONFIDENCE from the feature properties
         var style = feature.get(keyValues.property);
         // if there is no style or its one we don't recognize,
@@ -388,31 +390,37 @@ export function mapLayerBuilder(models, config, cache, Parent) {
         featureStyle = styleCache[style];
         // check the cache and create a new style for the income
         // style if its not been created before.
+        if (keyValues.range === '[0, 50)' && (feature.properties_[keyValues.property] >= 0 && feature.properties_[keyValues.property] < 50)) colorL = keyValues.points.color;
+        if (keyValues.range === '[50, 75)' && (feature.properties_[keyValues.property] >= 50 && feature.properties_[keyValues.property] < 75)) colorM = keyValues.points.color;
+        if (keyValues.range === '[75, 100]' && (feature.properties_[keyValues.property] >= 75 && feature.properties_[keyValues.property] <= 100)) colorH = keyValues.points.color;
         if (!featureStyle) {
+          // if()
+          fill = new Fill({
+            color: colorL || colorM || colorH || 'rgba(255,255,255,0.4)'
+          });
+
+          stroke = new Stroke({
+            color: colorL || colorM || colorH || '#3399CC',
+            width: keyValues.points.width || 1.25
+          });
+
+          image = new Circle({
+            fill: fill,
+            stroke: stroke,
+            radius: keyValues.points.radius || 5
+          });
+
           featureStyle = new Style({
-            fill: new Fill({
-              color: keyValues.points.color || 'rgba(255,255,255,0.4)'
-            }),
-            stroke: new Stroke({
-              color: keyValues.points.color || 'rgba(255,255,255,0.4)',
-              width: 1
-            }),
-            image: new Circle({
-              fill: new Fill({
-                color: keyValues.points.color || 'rgba(255,255,255,0.4)'
-              }),
-              stroke: new Stroke({
-                color: keyValues.points.color || '#3399CC',
-                width: keyValues.points.width || 1.25
-              }),
-              radius: keyValues.points.radius || 5
-            })
+            fill: fill,
+            stroke: stroke,
+            image: image
           });
           styleCache[style] = featureStyle;
         }
       });
       // at this point, the style for the current style is in the cache
       // so return it (as an array!)
+      // console.log(featureStyle);
       return featureStyle;
     };
 
