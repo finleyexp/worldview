@@ -72,18 +72,16 @@ export function mapLayerBuilder(models, config, cache, Parent) {
           });
         }
       } else if (def.type === 'vector') {
+        // Add vector layer style to config.rendered object
         var promises = [];
         if (config.layers[def.id] && config.layers[def.id].vectorStyle) {
           promises.push(palettes.loadRenderedVectorStyle(config, def.id));
         }
-        console.log(config);
-        // Set default color when layer is initially loaded. This should go away.
-        color = 'rgba(255,0,0,1)';
 
         layer = createLayerVector(def, options, null);
         if (proj.id === 'geographic' && def.wrapadjacentdays === true) {
-          layerNext = createLayerVector(def, options, 1, color);
-          layerPrior = createLayerVector(def, options, -1, color);
+          layerNext = createLayerVector(def, options, 1);
+          layerPrior = createLayerVector(def, options, -1);
 
           layer.wv = attributes;
           layerPrior.wv = attributes;
@@ -347,7 +345,8 @@ export function mapLayerBuilder(models, config, cache, Parent) {
     });
 
     var styleOptions = function(feature, resolution) {
-      // Create a default style in case nothing matches
+      // Create a default style in case nothing matches.
+      // This default style is what openlayers applies if no style is set
       var fill = new Fill({
         color: 'rgba(255,255,255,0.4)'
       });
@@ -357,10 +356,10 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       });
       var defaultStyle = new Style({
         fill: new Fill({
-          color: [250, 0, 0, 1]
+          color: [250, 250, 250, 1]
         }),
         stroke: new Stroke({
-          color: [220, 0, 0, 1],
+          color: [220, 250, 250, 1],
           width: 1
         }),
         image: new Circle({
@@ -381,14 +380,19 @@ export function mapLayerBuilder(models, config, cache, Parent) {
         if (feature.properties_[stylePropertyKey]) {
           // Style fire layer confidence
           if (feature.type_ === 'Point' && stylePropertyKey === 'CONFIDENCE') {
+
           }
           // Ensure the feature is a point and the style has a property of time to style big/little time points
           else if (feature.type_ === 'Point' && stylePropertyKey === 'time') {
+            // console.log(styleValues);
             // Use regular expression here to style little vs big points
             //
             // Little Points = ^[0-9][0-9]:[0-9][1,2,3,4,6,7,8,9]$
             // Big Points = ^[0-9][0-9]:[0-9][0,5]$
-            //
+            var pattern = new RegExp(feature.properties_.regex);
+            var time = feature.properties_.time;
+            var test = pattern.test(time);
+            // if (test) console.log('true');
           }
         // Must specify LineString and lines since these values are different
         // TODO: Make these values match in the style json.
