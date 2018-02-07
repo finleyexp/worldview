@@ -345,29 +345,6 @@ export function mapLayerBuilder(models, config, cache, Parent) {
     });
 
     var styleOptions = function(feature, resolution) {
-      // Create a default style in case nothing matches.
-      // This default style is what openlayers applies if no style is set
-      var fill = new Fill({
-        color: 'rgba(255,255,255,0.4)'
-      });
-      var stroke = new Stroke({
-        color: '#3399CC',
-        width: 1.25
-      });
-      var defaultStyle = new Style({
-        fill: new Fill({
-          color: [250, 250, 250, 1]
-        }),
-        stroke: new Stroke({
-          color: [220, 250, 250, 1],
-          width: 1
-        }),
-        image: new Circle({
-          fill: fill,
-          stroke: stroke,
-          radius: 5
-        })
-      });
 
       // Get the rendered vectorStyle's object containing groups of styles based on features
       var layerStyles = config.vectorStyles.rendered[def.id].styles;
@@ -392,35 +369,59 @@ export function mapLayerBuilder(models, config, cache, Parent) {
             var pattern = new RegExp(feature.properties_.regex);
             var time = feature.properties_.time;
             var test = pattern.test(time);
-            // if (test) console.log('true');
+            if (test) {
+
+            }
           }
         // Must specify LineString and lines since these values are different
         // TODO: Make these values match in the style json.
         } else if (feature.type_ === 'LineString' && styleValues['lines']) {
+        } else {
+          // return [defaultStyle];
         }
       });
 
+      var fill = new Fill({
+        color: 'rgba(255,0,0,0.4)'
+      });
+      var stroke = new Stroke({
+        color: '#3399CC',
+        width: 1.25
+      });
+
+      // Create styleCache Object
+      // ref: http://openlayers.org/en/v3.10.1/examples/kml-earthquakes.html
+      // ref: http://openlayersbook.github.io/ch06-styling-vector-layers/example-07.html
+
       // get the CONFIDENCE from the feature properties
       var confidence = feature.get('CONFIDENCE');
-      // console.log(confidence);
-      // if there is no confidence or its one we don't recognize,
+      // console.log(testing);
+      // if there is no testing or its one we don't recognize,
       // return the default style (in an array!)
-      if (!confidence) {
-        return [defaultStyle];
-      }
+      var confidenceStyle = styleCache[confidence];
       // check the cache and create a new style for the income
-      // confidence if its not been created before.
-      if (!styleCache[confidence]) {
-        styleCache[confidence] = new Style({
+      // testing if its not been created before.
+      if (!confidenceStyle) {
+        // console.log(testing);
+        confidenceStyle = new Style({
           fill: new Fill({
-            color: defaultStyle.fill
+            color: [250, 0, 0, 1]
           }),
-          stroke: defaultStyle.stroke
+          stroke: new Stroke({
+            color: [250, 0, 0, 1],
+            width: 1
+          }),
+          image: new Circle({
+            fill: fill,
+            stroke: stroke,
+            radius: 5
+          })
         });
+        styleCache[confidence] = confidenceStyle;
       }
-      // at this point, the style for the current confidence is in the cache
+      // at this point, the style for the current testing is in the cache
       // so return it (as an array!)
-      return [styleCache[confidence]];
+      return confidenceStyle;
     };
 
     var layer = new LayerVectorTile({
