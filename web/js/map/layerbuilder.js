@@ -393,29 +393,78 @@ export function mapLayerBuilder(models, config, cache, Parent) {
         if (keyValues.range === '[0, 50)' && (feature.properties_[keyValues.property] >= 0 && feature.properties_[keyValues.property] < 50)) colorL = keyValues.points.color;
         if (keyValues.range === '[50, 75)' && (feature.properties_[keyValues.property] >= 50 && feature.properties_[keyValues.property] < 75)) colorM = keyValues.points.color;
         if (keyValues.range === '[75, 100]' && (feature.properties_[keyValues.property] >= 75 && feature.properties_[keyValues.property] <= 100)) colorH = keyValues.points.color;
-        if (!featureStyle) {
-          // if()
-          fill = new Fill({
-            color: colorL || colorM || colorH || 'rgba(255,255,255,0.4)'
-          });
+        if (colorL) {
+          if (!featureStyle) {
+            fill = new Fill({
+              color: colorL || 'rgba(255,255,255,0.4)'
+            });
 
-          stroke = new Stroke({
-            color: colorL || colorM || colorH || '#3399CC',
-            width: keyValues.points.width || 1.25
-          });
+            stroke = new Stroke({
+              color: colorL || '#3399CC',
+              width: keyValues.points.width || 1.25
+            });
 
-          image = new Circle({
-            fill: fill,
-            stroke: stroke,
-            radius: keyValues.points.radius || 5
-          });
+            image = new Circle({
+              fill: fill,
+              stroke: stroke,
+              radius: keyValues.points.radius || 5
+            });
 
-          featureStyle = new Style({
-            fill: fill,
-            stroke: stroke,
-            image: image
-          });
-          styleCache[style] = featureStyle;
+            featureStyle = new Style({
+              fill: fill,
+              stroke: stroke,
+              image: image
+            });
+            styleCache[style] = featureStyle;
+          }
+        } else if (colorM) {
+          if (!featureStyle) {
+            fill = new Fill({
+              color: colorM || 'rgba(255,255,255,0.4)'
+            });
+
+            stroke = new Stroke({
+              color: colorM || '#3399CC',
+              width: keyValues.points.width || 1.25
+            });
+
+            image = new Circle({
+              fill: fill,
+              stroke: stroke,
+              radius: keyValues.points.radius || 5
+            });
+
+            featureStyle = new Style({
+              fill: fill,
+              stroke: stroke,
+              image: image
+            });
+            styleCache[style] = featureStyle;
+          }
+        } else if (colorH) {
+          if (!featureStyle) {
+            fill = new Fill({
+              color: colorH || 'rgba(255,255,255,0.4)'
+            });
+
+            stroke = new Stroke({
+              color: colorH || '#3399CC',
+              width: keyValues.points.width || 1.25
+            });
+
+            image = new Circle({
+              fill: fill,
+              stroke: stroke,
+              radius: keyValues.points.radius || 5
+            });
+
+            featureStyle = new Style({
+              fill: fill,
+              stroke: stroke,
+              image: image
+            });
+            styleCache[style] = featureStyle;
+          }
         }
       });
       // at this point, the style for the current style is in the cache
