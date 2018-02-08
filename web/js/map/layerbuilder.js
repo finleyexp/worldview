@@ -279,6 +279,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
     // console.log(config);
     var date, urlParameters, proj, extent, source, matrixSet, matrixIds, start, renderColor;
     var styleCache = {};
+    console.log(styleCache);
     proj = models.proj.selected;
     source = config.sources[def.source];
     extent = proj.maxExtent;
@@ -346,127 +347,155 @@ export function mapLayerBuilder(models, config, cache, Parent) {
     });
 
     var styleOptions = function(feature, resolution) {
-      var keys = [];
+      var fill, stroke, image, lowRange, highRange, operator, colorLow, colorMedium, colorHigh;
 
       // Get the rendered vectorStyle's object containing groups of styles based on features
       var layerStyles = config.vectorStyles.rendered[def.id].styles;
       // Each group in the object will have a property and name to be matched to vector point features
       var styleGroup = Object.keys(layerStyles).map(e => layerStyles[e]);
+
+      var matchedPropertyStyles = [];
+      var matchedLineStyles = [];
       lodashEach(styleGroup, function(styleValues, styleKeys) {
         var stylePropertyKey = styleValues.property;
-        if (stylePropertyKey in feature.properties_) keys.push(styleValues);
-        // Style features with matching style properties
-        // if (feature.properties_[stylePropertyKey]) {
-        //
-        //   // Style fire layer confidence
-        //   if (feature.type_ === 'Point' && stylePropertyKey === 'CONFIDENCE') {
-        //
-        //   }
-        //   // Ensure the feature is a point and the style has a property of time to style big/little time points
-        //   else if (feature.type_ === 'Point' && stylePropertyKey === 'time') {
-        //     // Use regular expression here to style little vs big points
-        //     //
-        //
-        //   }
-        // // Must specify LineString and lines since these values are different
-        // // TODO: Make these values match in the style json.
-        // } else if (feature.type_ === 'LineString' && styleValues['lines']) {
-        // } else {
-        //   // return [defaultStyle];
-        // }
+        if (stylePropertyKey in feature.properties_) matchedPropertyStyles.push(styleValues);
+        if (feature.type_ === 'LineString') matchedLineStyles.push(styleValues);
       });
-      // console.log(keys);
 
       // Create styleCache Object
       // ref: http://openlayers.org/en/v3.10.1/examples/kml-earthquakes.html
       // ref: http://openlayersbook.github.io/ch06-styling-vector-layers/example-07.html
       var featureStyle;
-      lodashEach(keys, function(keyValues, keyKeys) {
-        var fill, stroke, image, colorL, colorM, colorH;
+      lodashEach(matchedPropertyStyles, function(matchedStyle, matchedStyleKey) {
+        // console.log(matchedStyle);
         // get the CONFIDENCE from the feature properties
-        var style = feature.get(keyValues.property);
-        // if there is no style or its one we don't recognize,
-        // return the default style (in an array!)
-        featureStyle = styleCache[style];
-        // check the cache and create a new style for the income
-        // style if its not been created before.
-        if (keyValues.range === '[0, 50)' && (feature.properties_[keyValues.property] >= 0 && feature.properties_[keyValues.property] < 50)) colorL = keyValues.points.color;
-        if (keyValues.range === '[50, 75)' && (feature.properties_[keyValues.property] >= 50 && feature.properties_[keyValues.property] < 75)) colorM = keyValues.points.color;
-        if (keyValues.range === '[75, 100]' && (feature.properties_[keyValues.property] >= 75 && feature.properties_[keyValues.property] <= 100)) colorH = keyValues.points.color;
-        if (colorL) {
-          if (!featureStyle) {
-            fill = new Fill({
-              color: colorL || 'rgba(255,255,255,0.4)'
-            });
-
-            stroke = new Stroke({
-              color: colorL || '#3399CC',
-              width: keyValues.points.width || 1.25
-            });
-
-            image = new Circle({
-              fill: fill,
-              stroke: stroke,
-              radius: keyValues.points.radius || 5
-            });
-
-            featureStyle = new Style({
-              fill: fill,
-              stroke: stroke,
-              image: image
-            });
-            styleCache[style] = featureStyle;
+        var pointStyle = feature.get(matchedStyle.property);
+        if (pointStyle) {
+          // if there is no pointStyle or its one we don't recognize,
+          // return the default pointStyle (in an array!)
+          featureStyle = styleCache[pointStyle];
+          // check the cache and create a new pointStyle for the income
+          // pointStyle if its not been created before.
+          if (matchedStyle.range) {
+            // create range logic to dynamically style
+            var ranges = matchedStyle.range.split(',');
+            lowRange = ranges[ranges.length - 2];
+            highRange = ranges[ranges.length - 1];
+            if (matchedStyle.range.startsWith('[')) { operator = '>='; }
+            if (matchedStyle.range.startsWith('(')) { operator = '>'; }
+            if (matchedStyle.range.endsWith(']')) { operator = '<='; }
+            if (matchedStyle.range.endsWith(')')) { operator = '<'; }
           }
-        } else if (colorM) {
-          if (!featureStyle) {
-            fill = new Fill({
-              color: colorM || 'rgba(255,255,255,0.4)'
-            });
+          // Hard-coded logic to style based on range
+          if (matchedStyle.range === '[0, 50)' && (feature.properties_[matchedStyle.property] >= 0 && feature.properties_[matchedStyle.property] < 50)) colorLow = matchedStyle.points.color;
+          if (matchedStyle.range === '[50, 75)' && (feature.properties_[matchedStyle.property] >= 50 && feature.properties_[matchedStyle.property] < 75)) colorMedium = matchedStyle.points.color;
+          if (matchedStyle.range === '[75, 100]' && (feature.properties_[matchedStyle.property] >= 75 && feature.properties_[matchedStyle.property] <= 100)) colorHigh = matchedStyle.points.color;
+          if (colorLow) {
+            if (!featureStyle) {
+              fill = new Fill({
+                color: colorLow || 'rgba(255,255,255,0.4)'
+              });
 
-            stroke = new Stroke({
-              color: colorM || '#3399CC',
-              width: keyValues.points.width || 1.25
-            });
+              stroke = new Stroke({
+                color: colorLow || '#3399CC',
+                width: matchedStyle.points.width || 1.25
+              });
 
-            image = new Circle({
-              fill: fill,
-              stroke: stroke,
-              radius: keyValues.points.radius || 5
-            });
+              image = new Circle({
+                fill: fill,
+                stroke: stroke,
+                radius: matchedStyle.points.radius || 5
+              });
 
-            featureStyle = new Style({
-              fill: fill,
-              stroke: stroke,
-              image: image
-            });
-            styleCache[style] = featureStyle;
-          }
-        } else if (colorH) {
-          if (!featureStyle) {
-            fill = new Fill({
-              color: colorH || 'rgba(255,255,255,0.4)'
-            });
+              featureStyle = new Style({
+                fill: fill,
+                stroke: stroke,
+                image: image
+              });
+              styleCache[pointStyle] = featureStyle;
+            }
+          } else if (colorMedium) {
+            if (!featureStyle) {
+              fill = new Fill({
+                color: colorMedium || 'rgba(255,255,255,0.4)'
+              });
 
-            stroke = new Stroke({
-              color: colorH || '#3399CC',
-              width: keyValues.points.width || 1.25
-            });
+              stroke = new Stroke({
+                color: colorMedium || '#3399CC',
+                width: matchedStyle.points.width || 1.25
+              });
 
-            image = new Circle({
-              fill: fill,
-              stroke: stroke,
-              radius: keyValues.points.radius || 5
-            });
+              image = new Circle({
+                fill: fill,
+                stroke: stroke,
+                radius: matchedStyle.points.radius || 5
+              });
 
-            featureStyle = new Style({
-              fill: fill,
-              stroke: stroke,
-              image: image
-            });
-            styleCache[style] = featureStyle;
+              featureStyle = new Style({
+                fill: fill,
+                stroke: stroke,
+                image: image
+              });
+              styleCache[pointStyle] = featureStyle;
+            }
+          } else if (colorHigh) {
+            if (!featureStyle) {
+              fill = new Fill({
+                color: colorHigh || 'rgba(255,255,255,0.4)'
+              });
+
+              stroke = new Stroke({
+                color: colorHigh || '#3399CC',
+                width: matchedStyle.points.width || 1.25
+              });
+
+              image = new Circle({
+                fill: fill,
+                stroke: stroke,
+                radius: matchedStyle.points.radius || 5
+              });
+
+              featureStyle = new Style({
+                fill: fill,
+                stroke: stroke,
+                image: image
+              });
+              styleCache[pointStyle] = featureStyle;
+            }
           }
         }
       });
+
+      lodashEach(matchedLineStyles, function(matchedStyle, matchedStyleKey) {
+        // Style lines are seperate as there are no featues to match it to.
+        var lineStyle = feature.get('FID');
+        if (lineStyle) {
+          if (!featureStyle) {
+            fill = new Fill({
+              color: 'rgba(255,0,0,0.4)' || 'rgba(255,255,255,0.4)'
+            });
+
+            stroke = new Stroke({
+              color: 'rgba(255,0,0,0.4)' || '#3399CC',
+              width: 1.25
+            });
+
+            image = new Circle({
+              fill: fill,
+              stroke: stroke,
+              radius: 5
+            });
+
+            featureStyle = new Style({
+              fill: fill,
+              stroke: stroke,
+              image: image
+            });
+            styleCache[lineStyle] = featureStyle;
+          }
+        }
+      });
+
       // at this point, the style for the current style is in the cache
       // so return it (as an array!)
       // console.log(featureStyle);
