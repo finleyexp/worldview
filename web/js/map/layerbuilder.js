@@ -434,7 +434,9 @@ export function mapLayerBuilder(models, config, cache, Parent) {
               }),
               stroke: new Stroke({
                 color: labelStrokeColor || 'rgba(255, 255, 255, 1)'
-              })
+              }),
+              font: '9px sans-serif',
+              offsetX: 24
             });
 
             featureStyle = new Style({
