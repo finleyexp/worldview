@@ -358,15 +358,13 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       lodashEach(styleGroup, function(styleValues, styleKeys) {
         var stylePropertyKey = styleValues.property;
         if (stylePropertyKey in feature.properties_) matchedPropertyStyles.push(styleValues);
-        if (feature.type_ === 'LineString') matchedLineStyles.push(styleValues);
+        if (feature.type_ === 'LineString' && styleValues.lines) matchedLineStyles.push(styleValues);
       });
 
       var featureStyle;
       lodashEach(matchedPropertyStyles, function(matchedStyle, matchedStyleKey) {
         var pointStyle = feature.get(matchedStyle.property);
         if (pointStyle) {
-          featureStyle = styleCache[pointStyle];
-
           // Create range logic to dynamically style
           if (matchedStyle.range) {
             var ranges = matchedStyle.range.split(',');
@@ -382,7 +380,47 @@ export function mapLayerBuilder(models, config, cache, Parent) {
           if (matchedStyle.range === '[0, 50)' && (feature.properties_[matchedStyle.property] >= 0 && feature.properties_[matchedStyle.property] < 50)) colorLow = matchedStyle.points.color;
           if (matchedStyle.range === '[50, 75)' && (feature.properties_[matchedStyle.property] >= 50 && feature.properties_[matchedStyle.property] < 75)) colorMedium = matchedStyle.points.color;
           if (matchedStyle.range === '[75, 100]' && (feature.properties_[matchedStyle.property] >= 75 && feature.properties_[matchedStyle.property] <= 100)) colorHigh = matchedStyle.points.color;
-          if (colorLow) {
+
+          // The actual time in the feature. I need to use the style regex to determine what kind of time it is (big or little dot 5/10 min vs everything else);
+          if (feature.properties_.time) {
+            var time = feature.properties_.time;
+          }
+
+          // If there is a time property and a regular expression in the JSON style
+          if (matchedStyle.property === 'time' && matchedStyle.regex) {
+            var pattern = new RegExp(matchedStyle.regex);
+            var timeTest = pattern.test(time);
+            var timeColor = matchedStyle.points.color;
+            var timeRadius = matchedStyle.points.radius;
+          }
+
+          featureStyle = styleCache[pointStyle];
+
+          if (timeTest) {
+            if (!featureStyle) {
+              fill = new Fill({
+                color: timeColor || 'rgba(255,0,0,0.4)'
+              });
+
+              stroke = new Stroke({
+                color: timeColor || '#990000',
+                width: 1.25
+              });
+
+              image = new Circle({
+                fill: fill,
+                stroke: stroke,
+                radius: timeRadius || 5
+              });
+
+              featureStyle = new Style({
+                fill: fill,
+                stroke: stroke,
+                image: image
+              });
+              styleCache[pointStyle] = featureStyle;
+            }
+          } else if (colorLow) {
             if (!featureStyle) {
               fill = new Fill({
                 color: colorLow || 'rgba(255,255,255,0.4)'
@@ -484,31 +522,18 @@ export function mapLayerBuilder(models, config, cache, Parent) {
 
       // Style lines are seperate as there are no featues to match it to.
       lodashEach(matchedLineStyles, function(matchedStyle, matchedStyleKey) {
-        var lineStyle = feature.get('FID');
-        if (lineStyle) {
-          if (!featureStyle) {
-            fill = new Fill({
-              color: 'rgba(255,0,0,0.4)' || 'rgba(255,255,255,0.4)'
-            });
+        var lineStyle = feature.type; // "LineString" (they are all the same);
+        var lineColor = matchedStyle.lines.color;
+        var lineWidth = matchedStyle.lines.width;
 
-            stroke = new Stroke({
-              color: 'rgba(255,0,0,0.4)' || '#3399CC',
-              width: 1.25
-            });
-
-            image = new Circle({
-              fill: fill,
-              stroke: stroke,
-              radius: 5
-            });
-
-            featureStyle = new Style({
-              fill: fill,
-              stroke: stroke,
-              image: image
-            });
-            styleCache[lineStyle] = featureStyle;
-          }
+        if (!featureStyle) {
+          featureStyle = new Style({
+            stroke: new Stroke({
+              color: lineColor || '#3399CC',
+              width: lineWidth || 1.25
+            })
+          });
+          styleCache[lineStyle] = featureStyle;
         }
       });
 
