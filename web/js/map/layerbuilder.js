@@ -348,51 +348,64 @@ export function mapLayerBuilder(models, config, cache, Parent) {
     // ref: http://openlayers.org/en/v3.10.1/examples/kml-earthquakes.html
     // ref: http://openlayersbook.github.io/ch06-styling-vector-layers/example-07.html
     var styleOptions = function(feature, resolution) {
-      var color, width, radius, featureStyle, fill, stroke, image, lowRange, highRange, operator, colorLow, colorMedium, colorHigh;
+      var featureStyle, color, width, radius, fill, stroke, image;
       var layerStyles = config.vectorStyles.rendered[def.id].styles;
       var styleGroup = Object.keys(layerStyles).map(e => layerStyles[e]);
+      var styleGroupCount = 0;
       var matchedPropertyStyles = [];
       var matchedLineStyles = [];
 
       // Match JSON styles from GC to vector features and add styleValue to arrays
       lodashEach(styleGroup, function(styleValues) {
-        var stylePropertyKey = styleValues.property;
+        let stylePropertyKey = styleValues.property;
         if (stylePropertyKey in feature.properties_) matchedPropertyStyles.push(styleValues);
         if (feature.type_ === 'LineString' && styleValues.lines) matchedLineStyles.push(styleValues);
       });
-      var groupCount = 0;
+
+      // Style vector points
       lodashEach(matchedPropertyStyles, function(matchedStyle) {
-        groupCount++;
-        var pointStyle = feature.get(matchedStyle.property) + '_' + groupCount;
+        styleGroupCount++;
+        let pointStyle = feature.get(matchedStyle.property) + '_' + styleGroupCount;
         if (pointStyle) {
-          // Create range logic to dynamically style
+          featureStyle = styleCache[pointStyle];
+
+          // If there is a range, style properties based on ranges
           if (matchedStyle.range) {
-            var ranges = matchedStyle.range.split(',');
-            lowRange = ranges[ranges.length - 2];
-            highRange = ranges[ranges.length - 1];
-            if (matchedStyle.range.startsWith('[')) { operator = '>='; }
-            if (matchedStyle.range.startsWith('(')) { operator = '>'; }
-            if (matchedStyle.range.endsWith(']')) { operator = '<='; }
-            if (matchedStyle.range.endsWith(')')) { operator = '<'; }
+            let ranges = matchedStyle.range.split(',');
+            let lowRange = ranges[ranges.length - 2].substring(1).trim();
+            let highRange = ranges[ranges.length - 1].slice(0, -1).trim();
+            if (matchedStyle.range.startsWith('[') && matchedStyle.range.endsWith(']')) { // greater than or equal to + less than or equal to
+              if (feature.properties_[matchedStyle.property] >= lowRange && feature.properties_[matchedStyle.property] <= highRange) {
+                color = matchedStyle.points.color;
+              }
+            } else if (matchedStyle.range.startsWith('[') && matchedStyle.range.endsWith(')')) { // greater than or equal to + less than
+              if (feature.properties_[matchedStyle.property] >= lowRange && feature.properties_[matchedStyle.property] < highRange) {
+                color = matchedStyle.points.color;
+              }
+            } else if (matchedStyle.range.startsWith('(') && matchedStyle.range.endsWith(']')) { // greater than + less than or equal to
+              if (feature.properties_[matchedStyle.property] > lowRange && feature.properties_[matchedStyle.property] <= highRange) {
+                color = matchedStyle.points.color;
+              }
+            } else if (matchedStyle.range.startsWith('(') && matchedStyle.range.endsWith(')')) { // greater than + less than
+              if (feature.properties_[matchedStyle.property] > lowRange && feature.properties_[matchedStyle.property] < highRange) {
+                color = matchedStyle.points.color;
+              }
+            } else {
+              color = matchedStyle.points.color;
+            }
           }
 
-          // Hard-coded logic to style based on range
-          if (matchedStyle.range === '[0, 50)' && (feature.properties_[matchedStyle.property] >= 0 && feature.properties_[matchedStyle.property] < 50)) color = matchedStyle.points.color;
-          if (matchedStyle.range === '[50, 75)' && (feature.properties_[matchedStyle.property] >= 50 && feature.properties_[matchedStyle.property] < 75)) color = matchedStyle.points.color;
-          if (matchedStyle.range === '[75, 100]' && (feature.properties_[matchedStyle.property] >= 75 && feature.properties_[matchedStyle.property] <= 100)) color = matchedStyle.points.color;
-
-          // If there is a time in the feature, a time property and a regular expression in the JSON style
+          // Style time vector points
           if (feature.properties_.time && matchedStyle.property === 'time' && matchedStyle.regex) {
-            var time = feature.properties_.time;
-            var pattern = new RegExp(matchedStyle.regex);
-            var timeTest = pattern.test(time);
+            let time = feature.properties_.time;
+            let pattern = new RegExp(matchedStyle.regex);
+            let timeTest = pattern.test(time);
             if (timeTest) {
               color = matchedStyle.points.color;
               radius = matchedStyle.points.radius;
             }
           }
 
-          featureStyle = styleCache[pointStyle];
           if (!featureStyle) {
             fill = new Fill({
               color: color || 'rgba(255,255,255,0.4)'
@@ -419,11 +432,11 @@ export function mapLayerBuilder(models, config, cache, Parent) {
         }
       });
 
-      // Style lines are seperate as there are no featues to match it to.
+      // Style vector lines
       lodashEach(matchedLineStyles, function(matchedStyle) {
-        var lineStyle = feature.type;
-        var lineColor = matchedStyle.lines.color;
-        var lineWidth = matchedStyle.lines.width;
+        let lineStyle = feature.type;
+        let lineColor = matchedStyle.lines.color;
+        let lineWidth = matchedStyle.lines.width;
 
         if (!featureStyle) {
           featureStyle = new Style({
@@ -436,7 +449,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
         }
       });
 
-      // The style for this feature style is in the cache, return it as an array
+      // The style for this feature is in the cache. Return it as an array
       return featureStyle;
     };
 
