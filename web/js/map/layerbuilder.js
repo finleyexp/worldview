@@ -8,7 +8,7 @@ import OlLayerTile from 'ol/layer/tile';
 import OlTileGridTileGrid from 'ol/tilegrid/tilegrid';
 import Style from 'ol/style/style';
 import Circle from 'ol/style/circle';
-import Icon from 'ol/style/icon';
+import Text  from 'ol/style/text';
 import Fill from 'ol/style/fill';
 import MVT from 'ol/format/mvt';
 import Stroke from 'ol/style/stroke';
@@ -348,7 +348,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
     // ref: http://openlayers.org/en/v3.10.1/examples/kml-earthquakes.html
     // ref: http://openlayersbook.github.io/ch06-styling-vector-layers/example-07.html
     var styleOptions = function(feature, resolution) {
-      var featureStyle, color, width, radius, fill, stroke, image;
+      var featureStyle, color, width, radius, fill, stroke, image, text, label, labelFillColor, labelStrokeColor;
       var layerStyles = config.vectorStyles.rendered[def.id].styles;
       var styleGroup = Object.keys(layerStyles).map(e => layerStyles[e]);
       var styleGroupCount = 0;
@@ -403,16 +403,21 @@ export function mapLayerBuilder(models, config, cache, Parent) {
             if (timeTest) {
               color = matchedStyle.points.color;
               radius = matchedStyle.points.radius;
+              if (matchedStyle.label) {
+                label = feature.properties_.time;
+                labelFillColor = matchedStyle.label.fill_color;
+                labelStrokeColor = matchedStyle.label.stroke_color;
+              }
             }
           }
 
           if (!featureStyle) {
             fill = new Fill({
-              color: color || 'rgba(255,255,255,0.4)'
+              color: color || 'rgba(255, 255, 255, 0.4)'
             });
 
             stroke = new Stroke({
-              color: color || '#3399CC',
+              color: color || 'rgb(51, 153, 204, 1)',
               width: width || 1.25
             });
 
@@ -422,10 +427,21 @@ export function mapLayerBuilder(models, config, cache, Parent) {
               radius: radius || 5
             });
 
+            text = new Text({
+              text: label || '',
+              fill: new Fill({
+                color: labelFillColor || 'rgba(255, 255, 255, 1)'
+              }),
+              stroke: new Stroke({
+                color: labelStrokeColor || 'rgba(255, 255, 255, 1)'
+              })
+            });
+
             featureStyle = new Style({
               fill: fill,
               stroke: stroke,
-              image: image
+              image: image,
+              text: text
             });
             styleCache[pointStyle] = featureStyle;
           }
