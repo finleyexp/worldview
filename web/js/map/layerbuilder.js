@@ -40,7 +40,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
    * @returns {object} OpenLayers layer
    */
   self.createLayer = function (def, options) {
-    var color, hexColor, date, key, proj, layer, layerNext, layerPrior, attributes;
+    var date, key, proj, layer, layerNext, layerPrior, attributes;
     options = options || {};
     date = self.closestDate(def, options);
     key = self.layerKey(def, options, date);
@@ -276,10 +276,8 @@ export function mapLayerBuilder(models, config, cache, Parent) {
    * @returns {object} OpenLayers Vector layer
    */
   var createLayerVector = function(def, options, day) {
-    // console.log(config);
     var date, urlParameters, proj, extent, source, matrixSet, matrixIds, start, renderColor;
     var styleCache = {};
-    console.log(styleCache);
     proj = models.proj.selected;
     source = config.sources[def.source];
     extent = proj.maxExtent;
@@ -346,38 +344,31 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       })
     });
 
+    // Create style options and store them in a styleCache Object
+    // ref: http://openlayers.org/en/v3.10.1/examples/kml-earthquakes.html
+    // ref: http://openlayersbook.github.io/ch06-styling-vector-layers/example-07.html
     var styleOptions = function(feature, resolution) {
       var fill, stroke, image, lowRange, highRange, operator, colorLow, colorMedium, colorHigh;
-
-      // Get the rendered vectorStyle's object containing groups of styles based on features
       var layerStyles = config.vectorStyles.rendered[def.id].styles;
-      // Each group in the object will have a property and name to be matched to vector point features
       var styleGroup = Object.keys(layerStyles).map(e => layerStyles[e]);
-
       var matchedPropertyStyles = [];
       var matchedLineStyles = [];
+
+      // Match JSON styles from GC to vector features
       lodashEach(styleGroup, function(styleValues, styleKeys) {
         var stylePropertyKey = styleValues.property;
         if (stylePropertyKey in feature.properties_) matchedPropertyStyles.push(styleValues);
         if (feature.type_ === 'LineString') matchedLineStyles.push(styleValues);
       });
 
-      // Create styleCache Object
-      // ref: http://openlayers.org/en/v3.10.1/examples/kml-earthquakes.html
-      // ref: http://openlayersbook.github.io/ch06-styling-vector-layers/example-07.html
       var featureStyle;
       lodashEach(matchedPropertyStyles, function(matchedStyle, matchedStyleKey) {
-        // console.log(matchedStyle);
-        // get the CONFIDENCE from the feature properties
         var pointStyle = feature.get(matchedStyle.property);
         if (pointStyle) {
-          // if there is no pointStyle or its one we don't recognize,
-          // return the default pointStyle (in an array!)
           featureStyle = styleCache[pointStyle];
-          // check the cache and create a new pointStyle for the income
-          // pointStyle if its not been created before.
+
+          // Create range logic to dynamically style
           if (matchedStyle.range) {
-            // create range logic to dynamically style
             var ranges = matchedStyle.range.split(',');
             lowRange = ranges[ranges.length - 2];
             highRange = ranges[ranges.length - 1];
@@ -386,6 +377,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
             if (matchedStyle.range.endsWith(']')) { operator = '<='; }
             if (matchedStyle.range.endsWith(')')) { operator = '<'; }
           }
+
           // Hard-coded logic to style based on range
           if (matchedStyle.range === '[0, 50)' && (feature.properties_[matchedStyle.property] >= 0 && feature.properties_[matchedStyle.property] < 50)) colorLow = matchedStyle.points.color;
           if (matchedStyle.range === '[50, 75)' && (feature.properties_[matchedStyle.property] >= 50 && feature.properties_[matchedStyle.property] < 75)) colorMedium = matchedStyle.points.color;
@@ -462,12 +454,36 @@ export function mapLayerBuilder(models, config, cache, Parent) {
               });
               styleCache[pointStyle] = featureStyle;
             }
+          } else {
+            if (!featureStyle) {
+              fill = new Fill({
+                color: 'rgba(255,255,255,0.4)'
+              });
+
+              stroke = new Stroke({
+                color: '#3399CC',
+                width: 1.25
+              });
+
+              image = new Circle({
+                fill: fill,
+                stroke: stroke,
+                radius: 5
+              });
+
+              featureStyle = new Style({
+                fill: fill,
+                stroke: stroke,
+                image: image
+              });
+              styleCache['defaultStyle'] = featureStyle;
+            }
           }
         }
       });
 
+      // Style lines are seperate as there are no featues to match it to.
       lodashEach(matchedLineStyles, function(matchedStyle, matchedStyleKey) {
-        // Style lines are seperate as there are no featues to match it to.
         var lineStyle = feature.get('FID');
         if (lineStyle) {
           if (!featureStyle) {
@@ -496,9 +512,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
         }
       });
 
-      // at this point, the style for the current style is in the cache
-      // so return it (as an array!)
-      // console.log(featureStyle);
+      // The style for this feature style is in the cache, return it as an array
       return featureStyle;
     };
 
