@@ -394,9 +394,8 @@ export function mapLayerBuilder(models, config, cache, Parent) {
               color = matchedStyle.points.color;
             }
           }
-
-          // Style time vector points
-          if (feature.properties_.time && matchedStyle.property === 'time' && matchedStyle.regex) {
+          //  If there is a regexp and time property, style time vector points
+          else if (feature.properties_.time && matchedStyle.property === 'time' && matchedStyle.regex) {
             let time = feature.properties_.time;
             let pattern = new RegExp(matchedStyle.regex);
             let timeTest = pattern.test(time);
@@ -409,6 +408,12 @@ export function mapLayerBuilder(models, config, cache, Parent) {
                 labelStrokeColor = matchedStyle.label.stroke_color;
               }
             }
+          }
+          // Else set default styles
+          else {
+            color = matchedStyle.points.color;
+            radius = matchedStyle.points.radius;
+            width = matchedStyle.points.width;
           }
 
           if (!featureStyle) {
