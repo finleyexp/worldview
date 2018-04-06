@@ -8,7 +8,7 @@ import OlLayerTile from 'ol/layer/tile';
 import OlTileGridTileGrid from 'ol/tilegrid/tilegrid';
 import Style from 'ol/style/style';
 import Circle from 'ol/style/circle';
-import Text  from 'ol/style/text';
+import Text from 'ol/style/text';
 import Fill from 'ol/style/fill';
 import MVT from 'ol/format/mvt';
 import Stroke from 'ol/style/stroke';
@@ -276,7 +276,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
    * @returns {object} OpenLayers Vector layer
    */
   var createLayerVector = function(def, options, day) {
-    var date, urlParameters, proj, extent, source, matrixSet, matrixIds, start, renderColor;
+    var date, styleOptions, urlParameters, proj, extent, source, matrixSet, matrixIds, start;
     var styleCache = {};
     proj = models.proj.selected;
     source = config.sources[def.source];
@@ -347,7 +347,7 @@ export function mapLayerBuilder(models, config, cache, Parent) {
     // Create style options and store them in a styleCache Object
     // ref: http://openlayers.org/en/v3.10.1/examples/kml-earthquakes.html
     // ref: http://openlayersbook.github.io/ch06-styling-vector-layers/example-07.html
-    var styleOptions = function(feature, resolution) {
+    var featureStyles = function(feature, resolution) {
       var featureStyle, color, width, radius, fill, stroke, image, text, label, labelFillColor, labelStrokeColor;
       var layerStyles = config.vectorStyles.rendered[def.id].styles;
       var styleGroup = Object.keys(layerStyles).map(e => layerStyles[e]);
@@ -471,10 +471,34 @@ export function mapLayerBuilder(models, config, cache, Parent) {
           styleCache[lineStyle] = featureStyle;
         }
       });
-
       // The style for this feature is in the cache. Return it as an array
       return featureStyle;
     };
+
+    var defaultFill = new Fill({
+      color: 'rgba(255,255,255,0.4)'
+    });
+    var deafultStroke = new Stroke({
+      color: '#3399CC',
+      width: 1.25
+    });
+    var defaultStyles = [
+      new Style({
+        image: new Circle({
+          fill: defaultFill,
+          stroke: deafultStroke,
+          radius: 5
+        }),
+        fill: defaultFill,
+        stroke: deafultStroke
+      })
+    ];
+
+    if (!config.vectorStyles.rendered[def.id]) {
+      styleOptions = defaultStyles;
+    } else {
+      styleOptions = featureStyles;
+    }
 
     var layer = new LayerVectorTile({
       renderMode: 'image',
