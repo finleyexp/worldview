@@ -124,11 +124,11 @@ def process_colormaps():
 
 # Fetch every colormap from the API and write response to file system
 def process_vectorstyles():
-    print "%s: Fetching %d vectorstyles_dir" % (prog, len(vectorstyles_dir))
+    print "%s: Fetching %d vectorstyles" % (prog, len(vectorstyles))
     sys.stdout.flush()
     if not os.path.exists(vectorstyles_dir):
         os.makedirs(vectorstyles_dir)
-    for link in vectorstyles_dir.values():
+    for link in vectorstyles.values():
         try:
             response = urllib.urlopen(link)
             contents = response.read()
