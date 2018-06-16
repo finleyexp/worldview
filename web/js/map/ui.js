@@ -20,6 +20,7 @@ import OlInteractionPinchZoom from 'ol/interaction/pinchzoom';
 import OlInteractionDragPan from 'ol/interaction/dragpan';
 import OlInteractionMouseWheelZoom from 'ol/interaction/mousewheelzoom';
 import OlInteractionDragZoom from 'ol/interaction/dragzoom';
+import OlLayerGroup from 'ol/layer/group';
 import olExtent from 'ol/extent';
 import olProj from 'ol/proj';
 import { MapRotate } from './rotation';
@@ -28,6 +29,8 @@ import { mapLayerBuilder } from './layerbuilder';
 import { MapRunningData } from './runningdata';
 import { mapPrecacheTile } from './precachetile';
 import { mapUtilZoomAction } from './util';
+import { getActiveLayerGroupString } from '../compare/util';
+import { mapCompare } from './compare/compare';
 import Cache from 'cachai';
 
 export function mapui(models, config) {
@@ -40,15 +43,21 @@ export function mapui(models, config) {
   var rotation = new MapRotate(self, models);
   var dateline = mapDateLineBuilder(models, config);
   var precache = mapPrecacheTile(models, config, cache, self);
+  var compare = mapCompare(models, config);
 
-  var dataRunner = self.runningdata = new MapRunningData(models);
+  var dataRunner = (self.runningdata = new MapRunningData(models));
 
   self.mapIsbeingDragged = false;
   self.mapIsbeingZoomed = false;
   self.proj = {}; // One map for each projection
   self.selected = null; // The map for the selected projection
   self.events = util.events();
-  layerBuilder = self.layerBuilder = mapLayerBuilder(models, config, cache, self);
+  layerBuilder = self.layerBuilder = mapLayerBuilder(
+    models,
+    config,
+    cache,
+    self
+  );
   self.layerKey = layerBuilder.layerKey;
   createLayer = self.createLayer = layerBuilder.createLayer;
   self.promiseDay = precache.promiseDay;
@@ -61,18 +70,18 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var init = function () {
+  var init = function() {
     if (config.parameters.mockMap) {
       return;
     }
     // NOTE: iOS sometimes bombs if this is _.each instead. In that case,
     // it is possible that config.projections somehow becomes array-like.
-    lodashForOwn(config.projections, function (proj) {
+    lodashForOwn(config.projections, function(proj) {
       var map = createMap(proj);
       self.proj[proj.id] = map;
     });
 
-    models.proj.events.on('select', function () {
+    models.proj.events.on('select', function() {
       updateProjection();
     });
     models.layers.events
@@ -81,14 +90,14 @@ export function mapui(models, config) {
       .on('visibility', updateLayerVisibilities)
       .on('opacity', updateOpacity)
       .on('update', updateLayerOrder);
+    models.compare.events.on('change', reloadLayers);
     models.date.events.on('select', updateDate);
     models.palettes.events
       .on('set-custom', updateLookup)
       .on('clear-custom', updateLookup)
       .on('range', updateLookup)
       .on('update', updateLookup);
-    $(window)
-      .on('resize', onResize);
+    $(window).on('resize', onResize);
     updateProjection(true);
   };
   /*
@@ -101,7 +110,7 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var updateProjection = function (start) {
+  var updateProjection = function(start) {
     if (self.selected) {
       // Keep track of center point on projection switch
       self.selected.previousCenter = self.selected.center;
@@ -112,7 +121,10 @@ export function mapui(models, config) {
     reloadLayers();
 
     // Update the rotation buttons if polar projection to display correct value
-    if (models.proj.selected.id !== 'geographic' && models.proj.selected.id !== 'webmerc') {
+    if (
+      models.proj.selected.id !== 'geographic' &&
+      models.proj.selected.id !== 'webmerc'
+    ) {
       let currentRotation = map.getView().getRotation();
       rotation.setResetButton(currentRotation);
     }
@@ -137,10 +149,9 @@ export function mapui(models, config) {
         extent = models.map.getLeadingExtent();
       }
       if (extent) {
-        map.getView()
-          .fit(extent, {
-            constrainResolution: false
-          });
+        map.getView().fit(extent, {
+          constrainResolution: false
+        });
       }
     }
     updateExtent();
@@ -154,19 +165,17 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var onResize = function () {
+  var onResize = function() {
     var map = self.selected;
     if (map.small !== util.browser.small) {
       if (util.browser.small) {
         map.removeControl(map.wv.scaleImperial);
         map.removeControl(map.wv.scaleMetric);
-        $('#' + map.getTarget() + ' .select-wrapper')
-          .hide();
+        $('#' + map.getTarget() + ' .select-wrapper').hide();
       } else {
         map.addControl(map.wv.scaleImperial);
         map.addControl(map.wv.scaleMetric);
-        $('#' + map.getTarget() + ' .select-wrapper')
-          .show();
+        $('#' + map.getTarget() + ' .select-wrapper').show();
       }
     }
   };
@@ -180,9 +189,8 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var hideMap = function (map) {
-    $('#' + map.getTarget())
-      .hide();
+  var hideMap = function(map) {
+    $('#' + map.getTarget()).hide();
   };
   /*
    * Show Map
@@ -194,9 +202,8 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var showMap = function (map) {
-    $('#' + map.getTarget())
-      .show();
+  var showMap = function(map) {
+    $('#' + map.getTarget()).show();
   };
   /*
    * Remove Layers from map
@@ -208,14 +215,13 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var clearLayers = function (map) {
-    var activeLayers = map.getLayers()
+  var clearLayers = function(map) {
+    var activeLayers = map
+      .getLayers()
       .getArray()
       .slice(0);
-    lodashEach(activeLayers, function (mapLayer) {
-      if (mapLayer.wv) {
-        map.removeLayer(mapLayer);
-      }
+    lodashEach(activeLayers, function(mapLayer) {
+      map.removeLayer(mapLayer);
     });
     removeGraticule();
     cache.clear();
@@ -231,21 +237,54 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var reloadLayers = function (map) {
+  var reloadLayers = function(map) {
     map = map || self.selected;
-    clearLayers(map);
+    var compareModel = models.compare;
+    var layerGroupStr = getActiveLayerGroupString(
+      compareModel.active,
+      compareModel.isCompareA
+    );
+    var activeLayers = models.layers[layerGroupStr];
 
-    var defs = models.layers.get({
-      reverse: true
-    });
-    lodashEach(defs, function (def) {
-      if (isGraticule(def)) {
-        addGraticule();
-      } else {
-        self.selected.addLayer(createLayer(def));
+    clearLayers(map);
+    if (layerGroupStr === 'active') {
+      if (compare.active) {
+        compare.destroy();
       }
-    });
+      let defs = models.layers.get(
+        {
+          reverse: true
+        },
+        activeLayers
+      );
+      lodashEach(defs, function(def) {
+        if (isGraticule(def)) {
+          addGraticule();
+        } else {
+          self.selected.addLayer(createLayer(def));
+        }
+      });
+    } else {
+      let stateArray = [['activeA', 'selectedA'], ['activeB', 'selectedB']];
+      if (!compareModel.isCompareA) stateArray.reverse();
+      lodashEach(stateArray, arr => {
+        self.selected.addLayer(getCompareLayerGroup(arr));
+      });
+      compare.create(map, compareModel.mode);
+    }
     updateLayerVisibilities();
+  };
+  var getCompareLayerGroup = function(arr) {
+    return new OlLayerGroup({
+      layers: models.layers
+        .get({ reverse: true }, models.layers[arr[0]])
+        .map(def => {
+          return createLayer(def, {
+            date: models.date[arr[1]]
+          });
+        }),
+      group: arr[0]
+    });
   };
   /*
    * Function called when layers need to be updated
@@ -256,18 +295,41 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var updateLayerVisibilities = function () {
+  var updateLayerVisibilities = function() {
+    var renderable;
     var layers = self.selected.getLayers();
-    layers.forEach(function (layer) {
+    var compareModel = models.compare;
+    var layersModel = models.layers;
+    let layerGroupStr = getActiveLayerGroupString(
+      compareModel.active,
+      compareModel.isCompareA
+    );
+    layers.forEach(function(layer) {
+      var group = layer.get('group');
       if (layer.wv) {
-        var renderable = models.layers.isRenderable(layer.wv.id);
+        renderable = layersModel.isRenderable(layer.wv.id);
         layer.setVisible(renderable);
+      } else if (group) {
+        lodashEach(layer.getLayers().getArray(), subLayer => {
+          if (subLayer.wv) {
+            renderable = layersModel.isRenderable(
+              subLayer.wv.id,
+              layersModel[group],
+              layer.get('date')
+            );
+            subLayer.setVisible(renderable);
+          }
+        });
+        layer.setVisible(true);
       }
     });
-    var defs = models.layers.get();
-    lodashEach(defs, function (def) {
+    var defs = layersModel.get({}, layersModel[layerGroupStr]);
+    lodashEach(defs, function(def) {
       if (isGraticule(def)) {
-        var renderable = models.layers.isRenderable(def.id);
+        renderable = layersModel.isRenderable(
+          def.id,
+          layersModel[layerGroupStr]
+        );
         if (renderable) {
           addGraticule();
         } else {
@@ -288,7 +350,7 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var updateOpacity = function (def, value) {
+  var updateOpacity = function(def, value) {
     var layer = findLayer(def);
     layer.setOpacity(value);
     updateLayerVisibilities();
@@ -304,19 +366,21 @@ export function mapui(models, config) {
    * @returns {void}
    */
 
-  var addLayer = function (def) {
-    var date = models.date.selected;
-    var mapIndex = lodashFindIndex(models.layers.get({
-      reverse: true
-    }), {
-      id: def.id
-    });
+  var addLayer = function(def, date) {
+    date = date || models.date.selected;
+    var mapIndex = lodashFindIndex(
+      models.layers.get({
+        reverse: true
+      }),
+      {
+        id: def.id
+      }
+    );
     if (isGraticule(def)) {
       addGraticule();
     } else {
       def.availableDates = util.datesinDateRanges(def, date, true);
-      self.selected.getLayers()
-        .insertAt(mapIndex, createLayer(def));
+      self.selected.getLayers().insertAt(mapIndex, createLayer(def));
     }
     updateLayerVisibilities();
     self.events.trigger('added-layer');
@@ -331,7 +395,7 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var removeLayer = function (def) {
+  var removeLayer = function(def) {
     if (isGraticule(def)) {
       removeGraticule();
     } else {
@@ -350,7 +414,7 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var updateLayerOrder = function () {
+  var updateLayerOrder = function() {
     reloadLayers();
   };
 
@@ -363,16 +427,15 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var updateDate = function () {
+  var updateDate = function() {
     var defs = models.layers.get();
-    lodashEach(defs, function (def) {
+    lodashEach(defs, function(def) {
       if (!['subdaily', 'daily', 'monthly', 'yearly'].includes(def.period)) {
         return;
       }
       var index = findLayerIndex(def);
 
-      self.selected.getLayers()
-        .setAt(index, createLayer(def));
+      self.selected.getLayers().setAt(index, createLayer(def));
     });
     updateLayerVisibilities();
   };
@@ -388,11 +451,11 @@ export function mapui(models, config) {
    *
    * @todo Check if this function can be combined with updateLayerOrder
    */
-  var updateLookup = function (layerId) {
+  var updateLookup = function(layerId) {
     reloadLayers();
   };
 
-  self.getCustomLayerTimeout = function (layer) {
+  self.getCustomLayerTimeout = function(layer) {
     if (models.palettes.isActive(layer.id)) {
       return 200;
     }
@@ -409,9 +472,8 @@ export function mapui(models, config) {
    *
    * @returns {object} Layer object
    */
-  var findLayer = function (def) {
-    var layers = self.selected.getLayers()
-      .getArray();
+  var findLayer = function(def) {
+    var layers = self.selected.getLayers().getArray();
     var layer = lodashFind(layers, {
       wv: {
         id: def.id
@@ -431,9 +493,8 @@ export function mapui(models, config) {
    *
    * @returns {number} Index of layer in OpenLayers layer array
    */
-  var findLayerIndex = function (def) {
-    var layers = self.selected.getLayers()
-      .getArray();
+  var findLayerIndex = function(def) {
+    var layers = self.selected.getLayers().getArray();
     var layer = lodashFindIndex(layers, {
       wv: {
         id: def.id
@@ -455,10 +516,11 @@ export function mapui(models, config) {
    *
    * @returns {boolean}
    */
-  var isGraticule = function (def) {
+  var isGraticule = function(def) {
     var proj = models.proj.selected.id;
-    return (def.projections[proj].type === 'graticule' ||
-      def.type === 'graticule');
+    return (
+      def.projections[proj].type === 'graticule' || def.type === 'graticule'
+    );
   };
 
   /*
@@ -472,8 +534,10 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var addGraticule = function () {
-    if (self.selected.graticule) { return; }
+  var addGraticule = function() {
+    if (self.selected.graticule) {
+      return;
+    }
 
     self.selected.graticule = new OlGraticule({
       map: self.selected,
@@ -495,17 +559,23 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var removeGraticule = function () {
-    if (self.selected.graticule) { self.selected.graticule.setMap(null); }
+  var removeGraticule = function() {
+    if (self.selected.graticule) {
+      self.selected.graticule.setMap(null);
+    }
 
     self.selected.graticule = null;
   };
 
-  var triggerExtent = lodashThrottle(function () {
-    self.events.trigger('extent');
-  }, 500, {
-    trailing: true
-  });
+  var triggerExtent = lodashThrottle(
+    function() {
+      self.events.trigger('extent');
+    },
+    500,
+    {
+      trailing: true
+    }
+  );
 
   /*
    * Updates the extents of OpenLayers map
@@ -516,10 +586,9 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var updateExtent = function () {
+  var updateExtent = function() {
     var map = self.selected;
-    models.map.update(map.getView()
-      .calculateExtent(map.getSize()));
+    models.map.update(map.getView().calculateExtent(map.getSize()));
     triggerExtent();
   };
   /*
@@ -534,9 +603,15 @@ export function mapui(models, config) {
    *
    * @returns {object} OpenLayers Map Object
    */
-  var createMap = function (proj) {
-    var id, $map, scaleMetric, scaleImperial, rotateInteraction,
-      map, mobileRotation;
+  var createMap = function(proj, dateSelected) {
+    dateSelected = dateSelected || models.date.selected;
+    var id,
+      $map,
+      scaleMetric,
+      scaleImperial,
+      rotateInteraction,
+      map,
+      mobileRotation;
 
     id = 'wv-map-' + proj.id;
     $map = $('<div></div>')
@@ -544,8 +619,7 @@ export function mapui(models, config) {
       .attr('data-proj', proj.id)
       .addClass('wv-map')
       .hide();
-    $(selector)
-      .append($map);
+    $(selector).append($map);
 
     // Create two specific controls
     scaleMetric = new OlControlScaleLine({
@@ -569,7 +643,10 @@ export function mapui(models, config) {
         maxResolution: proj.resolutions[0],
         projection: olProj.get(proj.crs),
         center: proj.startCenter,
-        rotation: (proj.id === 'geographic' || proj.id === 'webmerc') ? 0.0 : models.map.rotation,
+        rotation:
+          proj.id === 'geographic' || proj.id === 'webmerc'
+            ? 0.0
+            : models.map.rotation,
         zoom: proj.startZoom,
         maxZoom: proj.numZoomLevels,
         enableRotation: true,
@@ -578,10 +655,7 @@ export function mapui(models, config) {
       target: id,
       renderer: ['canvas'],
       logo: false,
-      controls: [
-        scaleMetric,
-        scaleImperial
-      ],
+      controls: [scaleMetric, scaleImperial],
       interactions: [
         new OlInteractionDoubleClickZoom({
           duration: animationDuration
@@ -615,31 +689,27 @@ export function mapui(models, config) {
       map.addInteraction(rotateInteraction);
       map.addInteraction(mobileRotation);
     } else if (proj.id === 'geographic') {
-      dateline.init(self, map, models.date.selected);
+      dateline.init(self, map, dateSelected);
     }
 
     // Set event listeners for changes on the map view (when rotated, zoomed, panned)
-    map.getView()
-      .on('change:center', updateExtent);
-    map.getView()
-      .on('change:resolution', updateExtent);
-    map.getView()
-      .on('change:rotation', lodashThrottle(onRotate, 300));
-    map.on('pointerdrag', function () {
+    map.getView().on('change:center', updateExtent);
+    map.getView().on('change:resolution', updateExtent);
+    map.getView().on('change:rotation', lodashThrottle(onRotate, 300));
+    map.on('pointerdrag', function() {
       self.mapIsbeingDragged = true;
       self.events.trigger('drag');
     });
-    map.getView()
-      .on('propertychange', function (e) {
-        switch (e.key) {
-          case 'resolution':
-            self.mapIsbeingZoomed = true;
-            break;
-        }
-      });
-    map.on('moveend', function (e) {
+    map.getView().on('propertychange', function(e) {
+      switch (e.key) {
+        case 'resolution':
+          self.mapIsbeingZoomed = true;
+          break;
+      }
+    });
+    map.on('moveend', function(e) {
       self.events.trigger('moveend');
-      setTimeout(function () {
+      setTimeout(function() {
         self.mapIsbeingDragged = false;
         self.mapIsbeingZoomed = false;
       }, 200);
@@ -660,7 +730,7 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var createZoomButtons = function (map, proj) {
+  var createZoomButtons = function(map, proj) {
     var $map = $('#' + map.getTarget());
 
     var $zoomOut = $('<button></button>')
@@ -705,10 +775,9 @@ export function mapui(models, config) {
      * @returns {void}
      *
      */
-    var onZoomChange = function () {
+    var onZoomChange = function() {
       var maxZoom = proj.resolutions.length;
-      var zoom = map.getView()
-        .getZoom();
+      var zoom = map.getView().getZoom();
       if (zoom === 0) {
         $zoomIn.button('enable');
         $zoomOut.button('disable');
@@ -721,14 +790,13 @@ export function mapui(models, config) {
       }
     };
 
-    map.getView()
-      .on('change:resolution', function () {
-        onZoomChange();
-        self.events.trigger('movestart');
-      });
+    map.getView().on('change:resolution', function() {
+      onZoomChange();
+      self.events.trigger('movestart');
+    });
     onZoomChange();
   };
-  var onRotate = function () {
+  var onRotate = function() {
     rotation.updateRotation();
     updateExtent();
   };
@@ -748,7 +816,7 @@ export function mapui(models, config) {
    *
    * @todo move this component to another Location
    */
-  var createMousePosSel = function (map, proj) {
+  var createMousePosSel = function(map, proj) {
     var $map;
     var mapId;
     var $mousePosition;
@@ -783,7 +851,7 @@ export function mapui(models, config) {
      *
      * @returns {void}
      */
-    coordinateFormat = function (source, format, outsideExtent) {
+    coordinateFormat = function(source, format, outsideExtent) {
       var target, crs;
       crs = models.proj.selected.crs;
       if (outsideExtent) {
@@ -805,19 +873,15 @@ export function mapui(models, config) {
       .addClass('map-coord');
 
     if (util.getCoordinateFormat() === 'latlon-dd') {
-      $('div.map-coord')
-        .removeClass('latlon-selected');
+      $('div.map-coord').removeClass('latlon-selected');
       $latlonDD.addClass('latlon-selected');
     } else {
-      $('div.map-coord')
-        .removeClass('latlon-selected');
+      $('div.map-coord').removeClass('latlon-selected');
       $latlonDMS.addClass('latlon-selected');
     }
-    $coordBtn = $('<i></i>')
-      .addClass('coord-switch');
+    $coordBtn = $('<i></i>').addClass('coord-switch');
 
-    $coordWrapper = $('<div></div>')
-      .addClass('coord-btn');
+    $coordWrapper = $('<div></div>').addClass('coord-btn');
 
     $coordWrapper.append($coordBtn);
 
@@ -825,26 +889,25 @@ export function mapui(models, config) {
       .append($latlonDD)
       .append($latlonDMS)
       .append($coordWrapper)
-      .click(function () {
-        var $format = $(this)
-          .find('.latlon-selected');
+      .click(function() {
+        var $format = $(this).find('.latlon-selected');
 
         if ($format.attr('data-format') === 'latlon-dd') {
-          $('span.map-coord')
-            .removeClass('latlon-selected');
-          $('span.map-coord[data-format="latlon-dms"]')
-            .addClass('latlon-selected');
+          $('span.map-coord').removeClass('latlon-selected');
+          $('span.map-coord[data-format="latlon-dms"]').addClass(
+            'latlon-selected'
+          );
           util.setCoordinateFormat('latlon-dms');
         } else {
-          $('span.map-coord')
-            .removeClass('latlon-selected');
-          $('span.map-coord[data-format="latlon-dd"]')
-            .addClass('latlon-selected');
+          $('span.map-coord').removeClass('latlon-selected');
+          $('span.map-coord[data-format="latlon-dd"]').addClass(
+            'latlon-selected'
+          );
           util.setCoordinateFormat('latlon-dd');
         }
       });
 
-    function onMouseMove (e) {
+    function onMouseMove(e) {
       var coords;
       var pixels;
       var outside;
@@ -854,10 +917,10 @@ export function mapui(models, config) {
         return;
       }
       // if over coords return
-      if ($(e.relatedTarget)
-        .hasClass('map-coord') ||
-        $(e.relatedTarget)
-          .hasClass('coord-btn')) {
+      if (
+        $(e.relatedTarget).hasClass('map-coord') ||
+        $(e.relatedTarget).hasClass('coord-btn')
+      ) {
         return;
       }
       pixels = map.getEventPixel(e.originalEvent);
@@ -875,54 +938,52 @@ export function mapui(models, config) {
         }
       }
 
-      $('#' + mapId)
-        .show();
-      $('#' + mapId + ' span.map-coord')
-        .each(function () {
-          var format = $(this)
-            .attr('data-format');
-          $(this)
-            .html(coordinateFormat(coords, format, outside));
-        });
+      $('#' + mapId).show();
+      $('#' + mapId + ' span.map-coord').each(function() {
+        var format = $(this).attr('data-format');
+        $(this).html(coordinateFormat(coords, format, outside));
+      });
 
       // setting a limit on running-data retrievel
       if (self.mapIsbeingDragged || util.browser.small) {
         return;
       }
       // Don't add data runners if we're on the events or data tabs, or if map is animating
-      var isEventsTabActive = (typeof models.naturalEvents !== 'undefined' && models.naturalEvents.active);
-      var isDataTabActive = (typeof models.data !== 'undefined' && models.data.active);
-      var isMapAnimating = (typeof models.anim !== 'undefined' && models.anim.rangeState.playing);
+      var isEventsTabActive =
+        typeof models.naturalEvents !== 'undefined' &&
+        models.naturalEvents.active;
+      var isDataTabActive =
+        typeof models.data !== 'undefined' && models.data.active;
+      var isMapAnimating =
+        typeof models.anim !== 'undefined' && models.anim.rangeState.playing;
       if (isEventsTabActive || isDataTabActive || isMapAnimating) return;
 
       dataRunner.newPoint(pixels, map);
     }
     $(map.getViewport())
-      .mouseover(function (e) {
-        if ($(e.relatedTarget)
-          .hasClass('map-coord') ||
-          $(e.relatedTarget)
-            .hasClass('coord-btn')) {
+      .mouseover(function(e) {
+        if (
+          $(e.relatedTarget).hasClass('map-coord') ||
+          $(e.relatedTarget).hasClass('coord-btn')
+        ) {
           return;
         }
-        $('#' + mapId)
-          .show();
+        $('#' + mapId).show();
       })
-      .mouseout(function (e) {
-        if ($(e.relatedTarget)
-          .hasClass('map-coord') ||
-          $(e.relatedTarget)
-            .hasClass('coord-btn')) {
+      .mouseout(function(e) {
+        if (
+          $(e.relatedTarget).hasClass('map-coord') ||
+          $(e.relatedTarget).hasClass('coord-btn')
+        ) {
           return;
         }
-        $('#' + mapId)
-          .hide();
+        $('#' + mapId).hide();
         hoverThrottle.cancel();
         dataRunner.clearAll();
       })
-      .mousemove(hoverThrottle = lodashThrottle(onMouseMove, 300));
+      .mousemove((hoverThrottle = lodashThrottle(onMouseMove, 300)));
   };
 
   init();
   return self;
-};
+}
