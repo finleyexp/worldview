@@ -10,10 +10,22 @@ export function dateModel(config, spec) {
   self.selectedB = null;
   self.activeDate = 'selected';
 
-  self.monthAbbr = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  self.monthAbbr = [
+    'JAN',
+    'FEB',
+    'MAR',
+    'APR',
+    'MAY',
+    'JUN',
+    'JUL',
+    'AUG',
+    'SEP',
+    'OCT',
+    'NOV',
+    'DEC'
+  ];
 
-  var init = function () {
+  var init = function() {
     var initial = spec.initial || util.now();
     self.select(initial);
     if (config.features.compare) {
@@ -22,17 +34,20 @@ export function dateModel(config, spec) {
     }
   };
 
-  self.string = function () {
+  self.string = function() {
     return util.toISOStringDate(self.selected);
   };
 
-  self.select = function (date, selection) {
-    selection = selection || 'selected';
+  self.select = function(date, selectionStr) {
+    selectionStr = selectionStr || 'selected';
     date = self.clamp(date);
     var updated = false;
-    if (!self[selection] || date.getTime() !== self[selection].getTime()) {
-      self[selection] = date;
-      if (selection === self.activeDate) {
+    if (
+      !self[selectionStr] ||
+      date.getTime() !== self[selectionStr].getTime()
+    ) {
+      self[selectionStr] = date;
+      if (selectionStr === self.activeDate) {
         self.events.trigger('select', date);
       }
       updated = true;
@@ -40,12 +55,15 @@ export function dateModel(config, spec) {
     return updated;
   };
 
-  self.add = function (interval, amount, selection) {
-    selection = selection || self.selected;
-    self.select(util.dateAdd(selection, interval, amount), selection);
+  self.add = function(interval, amount, selectionStr) {
+    selectionStr = selectionStr || 'selected';
+    self.select(
+      util.dateAdd(self[selectionStr], interval, amount),
+      selectionStr
+    );
   };
 
-  self.clamp = function (date) {
+  self.clamp = function(date) {
     if (self.maxZoom > 3) {
       if (date > util.now()) {
         date = util.now();
@@ -64,7 +82,7 @@ export function dateModel(config, spec) {
     return date;
   };
 
-  self.isValid = function (date) {
+  self.isValid = function(date) {
     if (self.maxZoom > 3) {
       if (date > util.now()) {
         return false;
@@ -83,25 +101,32 @@ export function dateModel(config, spec) {
     return true;
   };
 
-  self.minDate = function () {
+  self.minDate = function() {
     if (config.startDate) {
       return util.parseDateUTC(config.startDate);
     }
     return util.minDate();
   };
 
-  self.maxDate = function () {
+  self.maxDate = function() {
     return util.now();
   };
 
   self.maxZoom = null;
 
   var dateToStringForUrl = function(date) {
-    return date.toISOString()
-      .split('T')[0] + '-' + 'T' + self.selected.toISOString()
-      .split('T')[1].slice(0, -5) + 'Z';
+    return (
+      date.toISOString().split('T')[0] +
+      '-' +
+      'T' +
+      self.selected
+        .toISOString()
+        .split('T')[1]
+        .slice(0, -5) +
+      'Z'
+    );
   };
-  self.save = function (state) {
+  self.save = function(state) {
     state.t = dateToStringForUrl(self.selected);
     if (self.selectedZoom) {
       state.z = self.selectedZoom.toString();
@@ -112,7 +137,7 @@ export function dateModel(config, spec) {
     }
   };
 
-  self.load = function (state) {
+  self.load = function(state) {
     if (state.t) {
       self.select(state.t);
     }
@@ -128,4 +153,4 @@ export function dateModel(config, spec) {
   };
   init();
   return self;
-};
+}
