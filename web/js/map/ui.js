@@ -428,14 +428,20 @@ export function mapui(models, config) {
    * @returns {void}
    */
   var updateDate = function() {
-    var defs = models.layers.get();
-    lodashEach(defs, function(def) {
-      if (!['subdaily', 'daily', 'monthly', 'yearly'].includes(def.period)) {
-        return;
-      }
-      var index = findLayerIndex(def);
+    var layerGroupStrings = ['active'];
+    if (models.compare && models.compare.active) {
+      layerGroupStrings = ['activeA', 'activeB'];
+    };
+    lodashEach(layerGroupStrings, (layerGroupString) => {
+      var defs = models.layers.get({}, models.layers[layerGroupString])
+      lodashEach(defs, function(def) {
+        if (!['subdaily', 'daily', 'monthly', 'yearly'].includes(def.period)) {
+          return;
+        }
+        var index = findLayerIndex(def);
 
-      self.selected.getLayers().setAt(index, createLayer(def));
+        self.selected.getLayers().setAt(index, createLayer(def));
+      });
     });
     updateLayerVisibilities();
   };
