@@ -54,7 +54,6 @@ def process_layer(layer):
                 schema_version = item["@xlink:role"]
                 if schema_version == "http://earthdata.nasa.gov/gibs/metadata-type/colormap/1.3":
                     colormap_link = item["@xlink:href"]
-                    #colormap_link = layer["ows:Metadata"]["@xlink:href"]
                     colormap_file = os.path.basename(colormap_link)
                     colormap_id = os.path.splitext(colormap_file)[0]
                     colormaps[colormap_id] = colormap_link

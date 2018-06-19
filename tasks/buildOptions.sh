@@ -63,7 +63,7 @@ fi
 # Run extractConfigFromWMTS.py script with config.json
 if [ -e "$BUILD_DIR/config.json" ] ; then
     "$TASKS_DIR/extractConfigFromWMTS.py" "$BUILD_DIR/config.json" "$BUILD_DIR/gc" \
-            "$BUILD_DIR/config/wv.json/_wmts"
+      "$BUILD_DIR/config/wv.json/_wmts"
 fi
 
 # Run processVectorStyles.py and move colormaps where we want them

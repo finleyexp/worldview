@@ -226,11 +226,14 @@ export function mapLayerBuilder(models, config, cache, Parent) {
       }
     }
 
-    date = options.date || models.date.selected;
-    if (day) {
-      date = util.dateAdd(date, 'day', day);
+    urlParameters = '?';
+    if (def.period === 'daily') {
+      date = options.date || models.date.selected;
+      if (day) {
+        date = util.dateAdd(date, 'day', day);
+      }
+      urlParameters = '&TIME=' + util.toISOStringDate(date);
     }
-    extra = '?TIME=' + util.toISOStringSeconds(util.roundTimeOneMinute(date));
 
     var sourceOptions = {
       url: source.url + urlParameters,
@@ -393,9 +396,8 @@ export function mapLayerBuilder(models, config, cache, Parent) {
             } else {
               color = matchedStyle.points.color;
             }
-          }
-          //  If there is a regexp and time property, style time vector points
-          else if (feature.properties_.time && matchedStyle.property === 'time' && matchedStyle.regex) {
+          } else if (feature.properties_.time && matchedStyle.property === 'time' && matchedStyle.regex) {
+            //  If there is a regexp and time property, style time vector points
             let time = feature.properties_.time;
             let pattern = new RegExp(matchedStyle.regex);
             let timeTest = pattern.test(time);
@@ -408,9 +410,8 @@ export function mapLayerBuilder(models, config, cache, Parent) {
                 labelStrokeColor = matchedStyle.label.stroke_color;
               }
             }
-          }
-          // Else set default styles
-          else {
+          } else {
+            // Else set default styles
             color = matchedStyle.points.color;
             radius = matchedStyle.points.radius;
             width = matchedStyle.points.width;
@@ -558,14 +559,15 @@ export function mapLayerBuilder(models, config, cache, Parent) {
 
     urlParameters = '?';
 
-    date = options.date || models.date.selected;
-    if (day) {
-      date = util.dateAdd(date, 'day', day);
+    if (def.period === 'daily') {
+      date = options.date || models.date.selected;
+      if (day) {
+        date = util.dateAdd(date, 'day', day);
+      }
+      urlParameters += 'TIME=' + util.toISOStringDate(date);
     }
-    extra = '?TIME=' + util.toISOStringSeconds(util.roundTimeOneMinute(date));
-
     var sourceOptions = {
-      url: source.url + extra,
+      url: source.url + urlParameters,
       cacheSize: 4096,
       wrapX: true,
       style: 'default',
