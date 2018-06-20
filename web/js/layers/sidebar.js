@@ -19,10 +19,10 @@ export function layersSidebar(models, config) {
   var isCollapsed = false;
   var activeTab = 'layers';
   var isCompareMode = false;
-  var mobile = false;
+  // var mobile = false;
   var self = {};
   var model = models.layers;
-  var compareObj;
+  var compareObj = {};
   var isCompareA = true;
   var compareModeType = 'swipe';
   self.events = util.events();
@@ -34,19 +34,29 @@ export function layersSidebar(models, config) {
   var init = function() {
     self.reactComponent = ReactDOM.render(
       React.createElement(Sidebar, getInitialProps()),
-      document.getElementById('productsHolder')
+      document.getElementById('wv-sidebar')
     );
     model.events.on('add', updateLayer).on('remove', updateLayer);
+    models.date.events.on('select', date => {
+      console.log(date);
+      if (models.date.activeDate === 'selected') {
+        updateState('layers');
+      } else {
+        updateState('layerObjects');
+      }
+    });
   };
   self.sizeEventsTab = function() {};
   var getInitialProps = function() {
     var compareModel;
     if (config.features.compare) {
       compareModel = models.compare;
-      isCompareA = compareModel.isCompareA;
-      isCompareMode = compareModel.active;
-      compareObj = getCompareObjects(models);
-      compareModeType = compareModel.mode;
+      if (models.compare.active) {
+        isCompareA = compareModel.isCompareA;
+        isCompareMode = compareModel.active;
+        compareObj = getCompareObjects(models);
+        compareModeType = compareModel.mode;
+      }
     }
     return {
       activeTab: activeTab,
@@ -83,16 +93,26 @@ export function layersSidebar(models, config) {
   var toggleComparisonObject = function() {
     isCompareA = !isCompareA;
     models.compare.toggleState();
-    models.layers.activeDate = getActiveDateString(isCompareMode, isCompareA);
+    models.date.activeDate = getActiveDateString(isCompareMode, isCompareA);
     updateState('isCompareA');
   };
   var onAddLayerCLick = function() {
-    console.log(models.layers);
     $('#layer-modal').dialog('open');
   };
   var toggleComparisonMode = function() {
     isCompareMode = !isCompareMode;
+    if (!models.layers.activeA || !models.date.selectedA) {
+      if (!models.date.selectedA) {
+        models.date.initCompare();
+      }
+      if (!models.layers.activeA) {
+        models.layers.initCompare();
+      }
+      updateState('layerObjects');
+    }
+
     models.compare.toggle();
+    models.date.activeDate = getActiveDateString(isCompareMode, isCompareA);
     updateState('isCompareMode');
   };
   var getActiveTabs = function() {

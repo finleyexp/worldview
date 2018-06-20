@@ -215,17 +215,58 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var clearLayers = function(map) {
+  var clearLayers = function(map, isOnlyFirstGroup) {
     var activeLayers = map
       .getLayers()
       .getArray()
       .slice(0);
+    if (isOnlyFirstGroup) activeLayers = activeLayers[0];
     lodashEach(activeLayers, function(mapLayer) {
       map.removeLayer(mapLayer);
     });
     removeGraticule();
     cache.clear();
   };
+  // var clearFirstLayerGroup = function(map) {
+  //   var layerGroup = map
+  //     .getLayers()
+  //     .getArray()
+  //     .slice(0)[0];
+  //   map.removeLayer(layerGroup);
+  // }
+  // var reloadCompareLayer = function(map) {
+  //   map = map || self.selected;
+  //   var activeLayerString = getActiveLayerGroupString(true, models.compare.isCompareA);
+  //   var layerGroup = map.getLayers()[0];
+  //   var activeLayers = models.layers.get({}, activeLayerString);
+  //   clearFirstLayerGroup();
+  //   if (layerGroupStr === 'active') {
+  //     if (compare.active) {
+  //       compare.destroy();
+  //     }
+  //     let defs = models.layers.get(
+  //       {
+  //         reverse: true
+  //       },
+  //       activeLayers
+  //     );
+  //     lodashEach(defs, function(def) {
+  //       if (isGraticule(def)) {
+  //         addGraticule();
+  //       } else {
+  //         self.selected.addLayer(createLayer(def));
+  //       }
+  //     });
+  //   } else {
+  //     let stateArray = [['activeA', 'selectedA'], ['activeB', 'selectedB']];
+  //     if (!compareModel.isCompareA) stateArray.reverse();
+  //     lodashEach(stateArray, arr => {
+  //       self.selected.addLayer(getCompareLayerGroup(arr));
+  //     });
+  //     compare.create(map, compareModel.mode);
+  //   }
+  //   updateLayerVisibilities();
+  // }
   /*
    * get layers from models obj
    * and add each layer to the map
@@ -237,7 +278,7 @@ export function mapui(models, config) {
    *
    * @returns {void}
    */
-  var reloadLayers = function(map) {
+  var reloadLayers = function(map, isLayerGroup) {
     map = map || self.selected;
     var compareModel = models.compare;
     var layerGroupStr = getActiveLayerGroupString(
@@ -428,20 +469,41 @@ export function mapui(models, config) {
    * @returns {void}
    */
   var updateDate = function() {
-    var layerGroupStrings = ['active'];
+    var layerGroupString = 'active';
     if (models.compare && models.compare.active) {
-      layerGroupStrings = ['activeA', 'activeB'];
-    };
-    lodashEach(layerGroupStrings, (layerGroupString) => {
-      var defs = models.layers.get({}, models.layers[layerGroupString])
-      lodashEach(defs, function(def) {
-        if (!['subdaily', 'daily', 'monthly', 'yearly'].includes(def.period)) {
-          return;
-        }
+      layerGroupString = getActiveLayerGroupString(
+        true,
+        models.compare.isCompareA
+      );
+    }
+    var layers = models.layers.get({}, models.layers[layerGroupString]);
+    lodashEach(layers, function(def) {
+      if (!['subdaily', 'daily', 'monthly', 'yearly'].includes(def.period)) {
+        return;
+      }
+      if (layerGroupString !== 'active') {
+        let layerGroups = self.selected.getLayers().getArray();
+        let layerGroup = layerGroups[0];
+        lodashEach(layers, layer => {
+          var layerGroupArray = layerGroup.getLayers();
+          self.selected.removeLayer(layerGroup);
+          lodashEach(layerGroup.getLayers(), layer => {
+            var index = lodashFindIndex(layerGroup, {
+              wv: {
+                id: def.id
+              }
+            });
+            layerGroupArray[index] = createLayer(def);
+            layerGroup.setLayers(layerGroupArray);
+          });
+          self.selected.addLayer(layerGroup);
+        });
+        reloadLayers();
+      } else {
         var index = findLayerIndex(def);
 
         self.selected.getLayers().setAt(index, createLayer(def));
-      });
+      }
     });
     updateLayerVisibilities();
   };
@@ -499,8 +561,9 @@ export function mapui(models, config) {
    *
    * @returns {number} Index of layer in OpenLayers layer array
    */
-  var findLayerIndex = function(def) {
+  var findLayerIndex = function(def, lengthOfComparisonGroups) {
     var layers = self.selected.getLayers().getArray();
+
     var layer = lodashFindIndex(layers, {
       wv: {
         id: def.id

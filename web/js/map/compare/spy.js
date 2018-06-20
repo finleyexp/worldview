@@ -4,7 +4,8 @@ var mousePosition = null;
 var spy = null;
 var layers = [];
 var map;
-var radius = 70;
+const DEFAULT_RADIUS = 70;
+var radius = DEFAULT_RADIUS;
 export class Spy {
   constructor(olMap) {
     map = olMap;
@@ -24,11 +25,22 @@ export class Spy {
   }
   updateSpy(e) {
     mousePosition = map.getEventPixel(e);
+    radius = DEFAULT_RADIUS;
+    map.render();
+  }
+  hideSpy(e) {
+    radius = 0;
+    map.render();
+  }
+  showSpy() {
+    radius = DEFAULT_RADIUS;
     map.render();
   }
   addSpy(map) {
     var mapCase = document.getElementById('wv-map');
     mapCase.addEventListener('mousemove', this.updateSpy);
+    mapCase.addEventListener('mouseleave', this.hideSpy);
+    mapCase.addEventListener('mouseenter', this.showSpy);
     return mapCase;
   }
 }

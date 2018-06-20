@@ -28,12 +28,15 @@ export function dateModel(config, spec) {
   var init = function() {
     var initial = spec.initial || util.now();
     self.select(initial);
-    if (config.features.compare) {
-      self.select(initial, 'selectedA');
-      self.select(util.dateAdd(initial, 'day', -5), 'selectedB');
+  };
+  self.initCompare = function() {
+    if (!self.selectedA) {
+      self.select(self.selected, 'selectedA');
+    }
+    if (!self.selectedB) {
+      self.select(util.dateAdd(self.selected, 'day', -5), 'selectedB');
     }
   };
-
   self.string = function() {
     return util.toISOStringDate(self.selected);
   };
@@ -41,6 +44,7 @@ export function dateModel(config, spec) {
   self.select = function(date, selectionStr) {
     selectionStr = selectionStr || 'selected';
     date = self.clamp(date);
+
     var updated = false;
     if (
       !self[selectionStr] ||
@@ -48,7 +52,7 @@ export function dateModel(config, spec) {
     ) {
       self[selectionStr] = date;
       if (selectionStr === self.activeDate) {
-        self.events.trigger('select', date);
+        self.events.trigger('select', date, selectionStr);
       }
       updated = true;
     }
@@ -132,8 +136,12 @@ export function dateModel(config, spec) {
       state.z = self.selectedZoom.toString();
     }
     if (config.features.compare) {
-      state.t1 = dateToStringForUrl(self.selectedA);
-      state.t2 = dateToStringForUrl(self.selectedB);
+      if (self.selectedA) {
+        state.t1 = dateToStringForUrl(self.selectedA);
+      }
+      if (self.selectedB) {
+        state.t2 = dateToStringForUrl(self.selectedB);
+      }
     }
   };
 

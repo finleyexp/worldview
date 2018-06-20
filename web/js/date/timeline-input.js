@@ -1,7 +1,5 @@
 import $ from 'jquery';
 import util from '../util/util';
-import lodashParseInt from 'lodash/parseInt';
-import lodashDebounce from 'lodash/debounce';
 import { getActiveDateString } from '../compare/util';
 import { DateSelector } from 'worldview-components';
 import React from 'react';
@@ -21,6 +19,7 @@ export function timelineInput(models, config, ui) {
   self.delta = 1;
   self.active = false;
   self.delay = 500;
+  self.reactComponent = null;
   var animator = null;
   var keyDown;
 
@@ -136,6 +135,15 @@ export function timelineInput(models, config, ui) {
     model.events.on('select', date => {
       self.reactComponent.setState({ date: date });
     });
+
+    if (models.compare) {
+      models.compare.events.on('toggle', () => {
+        var dateModel = models.date;
+        self.reactComponent.setState({
+          date: dateModel[dateModel.activeDate]
+        });
+      });
+    }
     self.update();
   };
 

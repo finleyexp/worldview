@@ -7,7 +7,6 @@ import lodashIsUndefined from 'lodash/isUndefined';
 import lodashCloneDeep from 'lodash/cloneDeep';
 import { getActiveDateString } from '../compare/util';
 import util from '../util/util';
-const activeGroups = ['active', 'activeA', 'activeB'];
 var loaded = false;
 
 export function layersModel(models, config) {
@@ -17,8 +16,8 @@ export function layersModel(models, config) {
   self.events = util.events();
 
   self.active = [];
-  self.activeA = [];
-  self.activeB = [];
+  self.activeA = null;
+  self.activeB = null;
 
   var init = function() {
     self.reset();
@@ -28,17 +27,18 @@ export function layersModel(models, config) {
     self.clear();
     if (config.defaults && config.defaults.startingLayers) {
       lodashEach(config.defaults.startingLayers, function(start) {
-        lodashEach(activeGroups, activeLayerString => {
-          self[activeLayerString] = self.add(
-            start.id,
-            start,
-            activeLayerString
-          );
-        });
+        self['active'] = self.add(start.id, start, 'active');
       });
     }
   };
-
+  self.initCompare = function() {
+    if (!self.activeA) {
+      self.activeA = lodashCloneDeep(self.active);
+    }
+    if (!self.activeB) {
+      self.activeB = lodashCloneDeep(self.active);
+    }
+  };
   self.get = function(spec, activeLayers) {
     spec = spec || {};
     activeLayers = activeLayers || self.active;
@@ -237,6 +237,7 @@ export function layersModel(models, config) {
 
   self.clear = function(projId, activeLayerString) {
     activeLayerString = activeLayerString || 'active';
+    if (!self[activeLayerString]) self[activeLayerString] = [];
     projId = projId || models.proj.selected.id;
     var defs = self[activeLayerString].slice(0);
     lodashEach(defs, function(def) {
