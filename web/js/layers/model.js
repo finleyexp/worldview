@@ -198,7 +198,7 @@ export function layersModel(models, config) {
     } else {
       self[activeLayerString].splice(split, 0, def);
     }
-    self.events.trigger('add', def);
+    self.events.trigger('add', def, null, self[activeLayerString]);
     self.events.trigger('change');
     return self[activeLayerString];
   };
@@ -214,7 +214,7 @@ export function layersModel(models, config) {
       if (index < split) {
         split -= 1;
       }
-      self.events.trigger('remove', def);
+      self.events.trigger('remove', def, self[activeLayerString]);
       self.events.trigger('change');
     }
   };

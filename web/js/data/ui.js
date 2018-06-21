@@ -245,7 +245,6 @@ export function dataUi(models, ui, config) {
   };
 
   var onActivate = function () {
-    ui.sidebar.selectTab('download');
     if (!mapController) {
       mapController = dataMap(model, maps, config);
     }

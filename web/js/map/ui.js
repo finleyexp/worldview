@@ -407,21 +407,21 @@ export function mapui(models, config) {
    * @returns {void}
    */
 
-  var addLayer = function(def, date) {
+  var addLayer = function(def, date, activeLayers) {
     date = date || models.date.selected;
-    var mapIndex = lodashFindIndex(
-      models.layers.get({
-        reverse: true
-      }),
-      {
-        id: def.id
-      }
-    );
+    var mapIndex = lodashFindIndex(activeLayers);
+    var layers = self.selected.getLayers().getArray();
+    var firstLayer = layers[0];
     if (isGraticule(def)) {
       addGraticule();
     } else {
       def.availableDates = util.datesinDateRanges(def, date, true);
-      self.selected.getLayers().insertAt(mapIndex, createLayer(def));
+      if (firstLayer && firstLayer.get('group')) {
+        let subLayers = firstLayer.getLayers().getArray();
+        subLayers.splice(mapIndex, 0, def);
+      } else {
+        self.selected.getLayers().insertAt(mapIndex, createLayer(def));
+      }
     }
     updateLayerVisibilities();
     self.events.trigger('added-layer');
@@ -477,6 +477,7 @@ export function mapui(models, config) {
       );
     }
     var layers = models.layers.get({}, models.layers[layerGroupString]);
+    console.log(layers);
     lodashEach(layers, function(def) {
       if (!['subdaily', 'daily', 'monthly', 'yearly'].includes(def.period)) {
         return;

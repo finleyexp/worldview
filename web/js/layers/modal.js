@@ -774,8 +774,8 @@ export function layersModal(models, ui, config) {
       models.compare.isCompareA
     );
     var props = {
-      addLayer: layerId => model.add(layerId, layerGroupStr),
-      removeLayer: layerId => model.remove(layerId, layerGroupStr),
+      addLayer: layerId => model.add(layerId, {}, layerGroupStr),
+      removeLayer: layerId => model.remove(layerId, {}, layerGroupStr),
       activeLayers: model[layerGroupStr],
       selectedProjection: projection,
       filteredLayers: getLayersForProjection(projection)

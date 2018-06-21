@@ -25,10 +25,7 @@ export function layersSidebar(models, config) {
   var compareObj = {};
   var isCompareA = true;
   var compareModeType = 'swipe';
-  self.events = util.events();
 
-  self.id = 'productsHolder';
-  self.selector = '#productsHolder';
   self.events = util.events();
 
   var init = function() {
@@ -36,9 +33,17 @@ export function layersSidebar(models, config) {
       React.createElement(Sidebar, getInitialProps()),
       document.getElementById('wv-sidebar')
     );
-    model.events.on('add', updateLayer).on('remove', updateLayer);
+    var updateLayers = function() {
+      if (models.compare.active) {
+        updateState('layerObjects');
+      } else {
+        updateState('layers');
+      }
+    };
+    model.events.on('add', updateLayers).on('remove', updateLayers);
+    models.data.events.on('activate', () => onTabClick('download'));
+    models.naturalEvents.events.on('activate', () => onTabClick('events'));
     models.date.events.on('select', date => {
-      console.log(date);
       if (models.date.activeDate === 'selected') {
         updateState('layers');
       } else {
@@ -49,6 +54,11 @@ export function layersSidebar(models, config) {
   self.sizeEventsTab = function() {};
   var getInitialProps = function() {
     var compareModel;
+    activeTab = models.naturalEvents.active
+      ? 'events'
+      : models.data.active
+        ? 'download'
+        : 'layers';
     if (config.features.compare) {
       compareModel = models.compare;
       if (models.compare.active) {

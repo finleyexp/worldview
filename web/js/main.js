@@ -21,6 +21,7 @@ import { timelineTicks } from './date/timeline-ticks';
 import { timelinePick } from './date/timeline-pick';
 import { timelinePan } from './date/timeline-pan';
 import { timelineInput } from './date/timeline-input';
+import { timelineCompare } from './date/compare-picks';
 
 // Layers
 import {
@@ -276,6 +277,9 @@ window.onload = () => {
         ui.anim.gif = animationGif(models, config, ui);
         ui.anim.ui = animationUi(models, ui);
       }
+      if (config.features.compare) {
+        ui.timeline.compare = timelineCompare(models, config, ui);
+      }
 
       ui.dateLabel = dateLabel(models);
     }
@@ -320,13 +324,9 @@ window.onload = () => {
     $('#eventsHolder').hide();
 
     if (config.features.dataDownload) {
-      models.data.events
-        .on('activate', function() {
-          ui.sidebar.selectTab('download');
-        })
-        .on('queryResults', function() {
-          ui.data.onViewChange();
-        });
+      models.data.events.on('queryResults', function() {
+        ui.data.onViewChange();
+      });
       ui.map.events.on('extent', function() {
         ui.data.onViewChange();
       });

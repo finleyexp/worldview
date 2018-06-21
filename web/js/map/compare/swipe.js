@@ -16,6 +16,7 @@ export class Swipe {
   update() {
     var mapLayers = map.getLayers().getArray();
     applyEventsToBaseLayers(mapLayers[1], map, applyLayerListeners);
+    applyEventsToBaseLayers(mapLayers[0], map, applyReverseLayerListeners);
   }
   destroy() {
     line.remove();
@@ -62,6 +63,11 @@ var applyLayerListeners = function(layer) {
   layer.on('postcompose', restore);
   layers.push(layer);
 };
+var applyReverseLayerListeners = function(layer) {
+  layer.on('precompose', reverseClip);
+  layer.on('postcompose', restore);
+  layers.push(layer);
+};
 var clip = function(event) {
   var ctx = event.context;
   var viewportWidth = map.getSize()[0];
@@ -69,6 +75,15 @@ var clip = function(event) {
   ctx.save();
   ctx.beginPath();
   ctx.rect(width, 0, ctx.canvas.width - width, ctx.canvas.height);
+  ctx.clip();
+};
+var reverseClip = function(event) {
+  var ctx = event.context;
+  var viewportWidth = map.getSize()[0];
+  var width = ctx.canvas.width * (1 - swipeOffset / viewportWidth);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, ctx.canvas.width - width, ctx.canvas.height);
   ctx.clip();
 };
 var restore = function(event) {
